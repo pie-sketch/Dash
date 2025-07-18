@@ -32,7 +32,7 @@ app.layout = dbc.Container([
 
     dbc.Row([
         dbc.Col(dcc.Graph(id="duration-hist"), md=4),
-        dbc.Col(dcc.Graph(id="load-violin"), md=4),
+        dbc.Col(dcc.Graph(id="load-pie"), md=4),
         dbc.Col(dcc.Graph(id="load-line"), md=4),
     ], className="mb-4"),
 
@@ -44,7 +44,7 @@ app.layout = dbc.Container([
 # --- Callback ---
 @app.callback(
     [Output("duration-hist", "figure"),
-     Output("load-violin", "figure"),
+     Output("load-pie", "figure"),
      Output("load-line", "figure"),
      Output("last-update", "children")],
     Input("auto-refresh", "n_intervals")
@@ -57,25 +57,22 @@ def update_charts(n):
     fig_dur = px.histogram(df, x="Duration", nbins=20, title="Duration Histogram",
                            color_discrete_sequence=["#8e44ad"])
 
-    # --- Load Violin Plot ---
-    fig_violin = px.violin(df, y="Load", box=True, points="all", title="Load Distribution",
-                           color_discrete_sequence=["#00cec9"])
+    # --- Load Pie Chart ---
+    pie_data = df.groupby("Name")["Load"].sum().reset_index()
+    fig_pie = px.pie(pie_data, names="Name", values="Load", title="Load Distribution by Person",
+                     color_discrete_sequence=px.colors.sequential.RdBu)
 
     # --- Line Chart ---
     df_sorted = df.sort_values("Start Time")
     fig_line = px.line(df_sorted, x="Start Time", y="Load", markers=True, title="Load Over Time",
                        color_discrete_sequence=["#fab1a0"])
 
-    for fig in [fig_dur, fig_violin, fig_line]:
+    for fig in [fig_dur, fig_pie, fig_line]:
         fig.update_layout(paper_bgcolor="#111", plot_bgcolor="#222", font_color="white")
 
-    return fig_dur, fig_violin, fig_line, f"Last updated: {pd.Timestamp.now():%d/%m/%Y %H:%M:%S}"
+    return fig_dur, fig_pie, fig_line, f"Last updated: {pd.Timestamp.now():%d/%m/%Y %H:%M:%S}"
 
 # --- Run ---
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))  # <-- must use os.environ['PORT']
+    port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
-
-
-
-
