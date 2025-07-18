@@ -16,6 +16,7 @@ def load_data():
     df["Pool Up"] = pd.to_datetime(df["Pool Up"], errors="coerce", dayfirst=True)
     df["Load"] = pd.to_numeric(df["Load"], errors="coerce").fillna(0)
     df["Duration"] = (df["End Time"] - df["Start Time"]).dt.total_seconds() / 60
+    df["Pool ID"] = df["Pool Name"] + " - " + df["Tab"]
     return df
 
 # --- App Init ---
@@ -25,19 +26,25 @@ app.title = "Live Pool Dashboard"
 # --- Layout ---
 app.layout = dbc.Container([
     dbc.Row([
-        dbc.Col(html.H2("📊 Live Pool Dashboard", className="text-center text-light mb-4"), width=12)
+        dbc.Col(html.H3("📊 Live Pool Dashboard"), width=12)
     ]),
 
     dcc.Interval(id="auto-refresh", interval=60*1000, n_intervals=0),
 
     dbc.Row([
-        dbc.Col(dcc.Graph(id="duration-hist"), md=4),
-        dbc.Col(dcc.Graph(id="load-pie"), md=4),
-        dbc.Col(dcc.Graph(id="load-line"), md=4),
+        dbc.Col(html.Div(id="pool-current"), width=4),
+        dbc.Col(html.Div(id="pool-prev1"), width=4),
+        dbc.Col(html.Div(id="pool-prev2"), width=4),
     ], className="mb-4"),
 
     dbc.Row([
-        dbc.Col(html.Div(id="last-update", className="text-end text-secondary"), width=12)
+        dbc.Col(dcc.Graph(id="duration-hist"), md=4),
+        dbc.Col(dcc.Graph(id="load-pie"), md=4),
+        dbc.Col(dcc.Graph(id="load-line"), md=4),
+    ]),
+
+    dbc.Row([
+        dbc.Col(html.Div(id="last-update", className="text-end text-secondary mt-2"), width=12)
     ])
 ], fluid=True)
 
@@ -46,31 +53,49 @@ app.layout = dbc.Container([
     [Output("duration-hist", "figure"),
      Output("load-pie", "figure"),
      Output("load-line", "figure"),
+     Output("pool-current", "children"),
+     Output("pool-prev1", "children"),
+     Output("pool-prev2", "children"),
      Output("last-update", "children")],
     Input("auto-refresh", "n_intervals")
 )
 def update_charts(n):
     df = load_data()
+
+    # Identify unique pools by Pool ID and latest Pool Up
+    pool_groups = df[df["Pool Up"].notna()].groupby("Pool ID")["Pool Up"].max().reset_index()
+    pool_groups = pool_groups.sort_values("Pool Up", ascending=False).head(3)
+
+    pool_ids = pool_groups["Pool ID"].tolist()
+    pools = []
+
+    for pool_id in pool_ids:
+        pool_df = df[df["Pool ID"] == pool_id]
+        pool_title = html.H5(pool_id)
+        task_list = html.Ul([
+            html.Li(f"{row['Name']}: Load {row['Load']}, Start: {row['Start Time']}, End: {row['End Time']}")
+            for _, row in pool_df.iterrows()
+        ])
+        pools.append(html.Div([pool_title, task_list]))
+
+    # Chart data (from whole dataframe, not limited to current pool)
     df = df[df["Start Time"].notna() & df["End Time"].notna()]
 
-    # --- Duration Histogram ---
-    fig_dur = px.histogram(df, x="Duration", nbins=20, title="Duration Histogram",
-                           color_discrete_sequence=["#8e44ad"])
+    fig_dur = px.histogram(df, x="Duration", nbins=20, title="Duration Histogram")
+    fig_pie = px.pie(df.groupby("Name")["Load"].sum().reset_index(),
+                     names="Name", values="Load", title="Load Distribution")
+    fig_line = px.line(df.sort_values("Start Time"), x="Start Time", y="Load",
+                       title="Load Over Time", markers=True)
 
-    # --- Load Pie Chart ---
-    pie_data = df.groupby("Name")["Load"].sum().reset_index()
-    fig_pie = px.pie(pie_data, names="Name", values="Load", title="Load Distribution by Person",
-                     color_discrete_sequence=px.colors.sequential.RdBu)
-
-    # --- Line Chart ---
-    df_sorted = df.sort_values("Start Time")
-    fig_line = px.line(df_sorted, x="Start Time", y="Load", markers=True, title="Load Over Time",
-                       color_discrete_sequence=["#fab1a0"])
-
-    for fig in [fig_dur, fig_pie, fig_line]:
-        fig.update_layout(paper_bgcolor="#111", plot_bgcolor="#222", font_color="white")
-
-    return fig_dur, fig_pie, fig_line, f"Last updated: {pd.Timestamp.now():%d/%m/%Y %H:%M:%S}"
+    return (
+        fig_dur,
+        fig_pie,
+        fig_line,
+        pools[0] if len(pools) > 0 else html.Div("No Current Pool"),
+        pools[1] if len(pools) > 1 else html.Div("No Previous Pool 1"),
+        pools[2] if len(pools) > 2 else html.Div("No Previous Pool 2"),
+        f"Last updated: {pd.Timestamp.now():%d/%m/%Y %H:%M:%S}"
+    )
 
 # --- Run ---
 if __name__ == "__main__":
