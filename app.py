@@ -1,6 +1,6 @@
 import dash
 import dash_bootstrap_components as dbc
-from dash import html, dcc, Input, Output
+from dash import html, dcc, Input, Output, State
 import pandas as pd
 import plotly.express as px
 import os
@@ -19,6 +19,33 @@ def load_data():
     df["Pool ID"] = df["Pool Name"] + " - " + df["Tab"]
     return df
 
+# --- Get Status Color ---
+def get_status(row):
+    if pd.isna(row["Start Time"]):
+        return "Not Started", "secondary"
+    elif pd.isna(row["End Time"]):
+        return "In Progress", "warning"
+    else:
+        return "Complete", "success"
+
+# --- Status Table Generator ---
+def generate_status_table(pool_df):
+    rows = []
+    for _, row in pool_df.iterrows():
+        status, color = get_status(row)
+        pill = dbc.Badge(status, color=color, className="ms-1", pill=True)
+        rows.append(
+            html.Tr([
+                html.Td(row["Name"]),
+                html.Td(int(row["Load"])),
+                html.Td(pill)
+            ])
+        )
+    return dbc.Table(
+        [html.Thead(html.Tr([html.Th("Name"), html.Th("Load"), html.Th("Status")]))] + [html.Tbody(rows)],
+        bordered=True, hover=True, responsive=True, striped=True, className="mt-2"
+    )
+
 # --- App Init ---
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
 app.title = "Live Pool Dashboard"
@@ -26,78 +53,62 @@ app.title = "Live Pool Dashboard"
 # --- Layout ---
 app.layout = dbc.Container([
     dbc.Row([
-        dbc.Col(html.H3("📊 Live Pool Dashboard"), width=12)
+        dbc.Col(html.H3("📊 Live Pool Dashboard"), width=8),
+        dbc.Col(html.Div(id="last-update", className="text-end text-secondary mt-2"), width=4)
     ]),
 
-    dcc.Interval(id="auto-refresh", interval=60*1000, n_intervals=0),
+    dcc.Interval(id="auto-refresh", interval=60000, n_intervals=0),
 
-    dbc.Row([
-        dbc.Col(html.Div(id="pool-current"), width=4),
-        dbc.Col(html.Div(id="pool-prev1"), width=4),
-        dbc.Col(html.Div(id="pool-prev2"), width=4),
-    ], className="mb-4"),
+    # --- Current Pool ---
+    html.H5("Current Pool", className="mt-4"),
+    html.Div(id="current-pool"),
 
-    dbc.Row([
-        dbc.Col(dcc.Graph(id="duration-hist"), md=4),
-        dbc.Col(dcc.Graph(id="load-pie"), md=4),
-        dbc.Col(dcc.Graph(id="load-line"), md=4),
-    ]),
+    # --- Previous Pools (Collapsed) ---
+    html.Hr(),
+    dbc.Button("Show Previous Pools", id="toggle-collapse", color="info", className="mb-2"),
+    dbc.Collapse(id="previous-pools", is_open=False),
 
-    dbc.Row([
-        dbc.Col(html.Div(id="last-update", className="text-end text-secondary mt-2"), width=12)
-    ])
 ], fluid=True)
 
 # --- Callback ---
 @app.callback(
-    [Output("duration-hist", "figure"),
-     Output("load-pie", "figure"),
-     Output("load-line", "figure"),
-     Output("pool-current", "children"),
-     Output("pool-prev1", "children"),
-     Output("pool-prev2", "children"),
-     Output("last-update", "children")],
+    Output("current-pool", "children"),
+    Output("previous-pools", "children"),
+    Output("last-update", "children"),
     Input("auto-refresh", "n_intervals")
 )
-def update_charts(n):
+def update_dashboard(n):
     df = load_data()
-
-    # Identify unique pools by Pool ID and latest Pool Up
     pool_groups = df[df["Pool Up"].notna()].groupby("Pool ID")["Pool Up"].max().reset_index()
     pool_groups = pool_groups.sort_values("Pool Up", ascending=False).head(3)
-
     pool_ids = pool_groups["Pool ID"].tolist()
-    pools = []
 
-    for pool_id in pool_ids:
-        pool_df = df[df["Pool ID"] == pool_id]
-        pool_title = html.H5(pool_id)
-        task_list = html.Ul([
-            html.Li(f"{row['Name']}: Load {row['Load']}, Start: {row['Start Time']}, End: {row['End Time']}")
-            for _, row in pool_df.iterrows()
-        ])
-        pools.append(html.Div([pool_title, task_list]))
+    pool_blocks = []
+    for pid in pool_ids:
+        sub_df = df[df["Pool ID"] == pid]
+        table = generate_status_table(sub_df)
+        block = dbc.Card([
+            dbc.CardHeader(html.H6(pid)),
+            dbc.CardBody(table)
+        ], className="mb-3")
+        pool_blocks.append(block)
 
-    # Chart data (from whole dataframe, not limited to current pool)
-    df = df[df["Start Time"].notna() & df["End Time"].notna()]
+    current = pool_blocks[0] if pool_blocks else html.Div("No current pool found.")
+    previous = pool_blocks[1:] if len(pool_blocks) > 1 else []
 
-    fig_dur = px.histogram(df, x="Duration", nbins=20, title="Duration Histogram")
-    fig_pie = px.pie(df.groupby("Name")["Load"].sum().reset_index(),
-                     names="Name", values="Load", title="Load Distribution")
-    fig_line = px.line(df.sort_values("Start Time"), x="Start Time", y="Load",
-                       title="Load Over Time", markers=True)
+    return current, previous, f"Last updated: {pd.Timestamp.now():%d/%m/%Y %H:%M:%S}"
 
-    return (
-        fig_dur,
-        fig_pie,
-        fig_line,
-        pools[0] if len(pools) > 0 else html.Div("No Current Pool"),
-        pools[1] if len(pools) > 1 else html.Div("No Previous Pool 1"),
-        pools[2] if len(pools) > 2 else html.Div("No Previous Pool 2"),
-        f"Last updated: {pd.Timestamp.now():%d/%m/%Y %H:%M:%S}"
-    )
+# --- Collapse Toggle ---
+@app.callback(
+    Output("previous-pools", "is_open"),
+    Input("toggle-collapse", "n_clicks"),
+    State("previous-pools", "is_open"),
+    prevent_initial_call=True
+)
+def toggle_previous(n, is_open):
+    return not is_open
 
 # --- Run ---
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run_server(host="0.0.0.0", port=port, debug=False)
