@@ -16,8 +16,7 @@ app.layout = html.Div(style={"backgroundColor": "#111", "color": "#FFF", "paddin
 
     dcc.Dropdown(id="pool-selector", placeholder="Select previous pool...", style={"width": "300px", "marginBottom": "20px"}),
 
-    dcc.Graph(id="pool-chart", config={"displayModeBar": True, "responsive": True}),
-    html.Div(id="pool-table", style={"overflowX": "auto"}),
+    dcc.Graph(id="pool-chart"),
 
     dcc.Interval(id="auto-refresh", interval=60 * 1000, n_intervals=0),
     html.Div(id="last-update", style={"textAlign": "right", "marginTop": "10px", "fontSize": "14px"})
@@ -45,16 +44,13 @@ def update_pool_list(n):
     return options, current_pool
 
 @app.callback(
-    [Output("pool-chart", "figure"),
-     Output("pool-table", "children"),
-     Output("last-update", "children")],
-    [Input("pool-selector", "value"),
-     Input("auto-refresh", "n_intervals")]
+    [Output("pool-chart", "figure"), Output("last-update", "children")],
+    [Input("pool-selector", "value"), Input("auto-refresh", "n_intervals")]
 )
 def update_dashboard(pool_name, n):
     df = load_data()
     if not pool_name:
-        return dash.no_update, dash.no_update, ""
+        return dash.no_update, ""
 
     pool_df = df[df["Pool Name"] == pool_name].copy()
     pool_up_time = pool_df["Pool Up"].dropna().min()
@@ -98,42 +94,23 @@ def update_dashboard(pool_name, n):
             "in progress": "#a8e6cf",
             "delay": "#f39c12"
         },
-        title=f"Load Distribution for {pool_name}",
         text="Load",
-        height=450
+        title=f"Load Distribution for {pool_name}"
     )
+
+    fig.update_traces(textposition="outside")
     fig.update_layout(
         plot_bgcolor="#222", paper_bgcolor="#111",
         font_color="white", title_font_color="white",
         xaxis_title="", yaxis_title="Load",
-        bargap=0.3,
-        margin=dict(l=40, r=40, t=60, b=40)
+        height=500,
+        bargap=0.4,
+        margin=dict(t=60, b=80, l=40, r=40),
+        hovermode="closest"
     )
-    fig.update_traces(textposition="outside", marker_line_width=1.2)
-
-    table = html.Table([
-        html.Thead(html.Tr([html.Th(col) for col in ["Name", "Start Time", "End Time", "Duration", "Load", "Status"]])),
-        html.Tbody([
-            html.Tr([
-                html.Td(row["Name"]),
-                html.Td(row["Start Time"].strftime("%d/%m %H:%M") if pd.notna(row["Start Time"]) else ""),
-                html.Td(row["End Time"].strftime("%d/%m %H:%M") if pd.notna(row["End Time"]) else ""),
-                html.Td(row["Duration"]),
-                html.Td(int(row["Load"])),
-                html.Td(row["Status"])
-            ]) for _, row in manpower_df.iterrows()
-        ])
-    ], style={
-        "width": "100%",
-        "marginTop": "20px",
-        "borderCollapse": "collapse",
-        "color": "#fff",
-        "backgroundColor": "#222",
-        "fontSize": "14px"
-    })
 
     last_time = pd.Timestamp.now().strftime("%d/%m/%Y %H:%M:%S")
-    return fig, table, f"Last updated: {last_time}"
+    return fig, f"Last updated: {last_time}"
 
 # --- Run app ---
 if __name__ == "__main__":
