@@ -1,4 +1,5 @@
 import dash
+import os
 from dash import html, dcc, Input, Output
 import pandas as pd
 import plotly.express as px
@@ -125,4 +126,5 @@ def update_dashboard(pool_name, n):
 
 # --- Run app ---
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 8050))
+    app.run(host="0.0.0.0", port=port, debug=True)
