@@ -2,7 +2,9 @@ import dash
 import dash_bootstrap_components as dbc
 from dash import html, dcc, Input, Output, State
 import pandas as pd
-from datetime import datetime
+import numpy as np
+import plotly.express as px
+from datetime import datetime, timedelta
 import os
 
 # --- Google Sheet CSV ---
@@ -23,21 +25,26 @@ def load_data():
 def get_status(row, pool_df):
     if not pd.isna(row["Pool Up"]):
         return "TL", "secondary"
+
     if row["Load"] == 0:
         return "Helper", "secondary"
 
     tl_row = pool_df[pool_df["Pool Up"].notna()]
     total_pool_load = tl_row["Load"].max() if not tl_row.empty else 0
 
-    active_staff = pool_df[(pool_df["Pool Up"].isna()) & (pool_df["Load"] > 0)]
+    active_staff = pool_df[
+        (pool_df["Pool Up"].isna()) &
+        (pool_df["Load"] > 0)
+    ]
     num_staff = len(active_staff)
     target_load = total_pool_load / num_staff if num_staff else 1
 
-    if abs(row["Load"] - target_load) <= 2:
+    if abs(row["Load"] - target_load) <= 3:
         return "Complete", "success"
+
     return "In Progress", "warning"
 
-# --- Status Block ---
+# --- Status Bar Generator ---
 def generate_status_block(pool_df):
     tl_row = pool_df[pool_df["Pool Up"].notna()]
     if not tl_row.empty:
@@ -48,7 +55,11 @@ def generate_status_block(pool_df):
     else:
         pool_name, tab, pool_up = "-", "-", "-"
 
-    active_rows = pool_df[(pool_df["Pool Up"].isna()) & (pool_df["Load"] > 0)].copy()
+    active_rows = pool_df[
+        (pool_df["Pool Up"].isna()) &
+        (pool_df["Load"] > 0)
+    ].copy()
+
     total_load = tl_row["Load"].max() if not tl_row.empty else 0
     num_staff = len(active_rows)
     target_load = total_load / num_staff if num_staff else 1
@@ -60,42 +71,35 @@ def generate_status_block(pool_df):
         status, color = get_status(row, pool_df)
 
         load_percent = min(100, int((load / target_load) * 100)) if target_load else 0
-        load_text = f"{int(load)} / {int(target_load)}"
-
-        load_bar = html.Div(
-            dbc.Progress(
-                value=load_percent,
-                color=color,
-                striped=(status == "In Progress"),
-                style={"height": "22px"},
-                className="text-white fw-bold",
-                children=load_text
-            ),
-            style={"width": "160px", "margin": "auto"}
+        load_bar = dbc.Progress(
+            value=load_percent,
+            color=color,
+            striped=(status == "In Progress"),
+            style={"height": "20px"},
         )
 
         visual_rows.append(
-            dbc.Col(
-                dbc.Card([
-                    dbc.CardBody([
-                        html.Div(name, style={"font-weight": "bold", "font-size": "1.1rem", "text-align": "center"}),
-                        load_bar,
-                        html.Div(status, style={"font-size": "0.9rem", "color": color, "text-align": "center"})
-                    ])
-                ], className="mb-2", style={"background-color": "#0d1b2a"}),
-                xs=12, sm=6, md=4, lg=3
-            )
+            dbc.Card([
+                dbc.CardBody([
+                    html.Div(name, style={"font-weight": "bold", "font-size": "1.1rem"}),
+                    load_bar,
+                    html.Div(status, style={"font-size": "0.9rem", "color": color})
+                ])
+            ], className="mb-2", style={"background-color": "#0d1b2a"})
         )
 
     return dbc.Card([
         dbc.CardHeader(html.Div([
-            html.Div("👥 Manpower", className="text-center", style={"font-size": "1.2rem", "font-weight": "bold"}),
+            html.Div("\U0001F465 Manpower", className="text-center", style={"font-size": "1.2rem", "font-weight": "bold"}),
             html.Div(f"{pool_name} - {tab}", className="text-center", style={"font-size": "1.2rem"}),
-            html.Div(f"⬆ Pool Up: {pool_up}", className="text-center", style={"font-size": "1.2rem"})
+            html.Div(f"\u2B06 Pool Up: {pool_up}", className="text-center", style={"font-size": "1.2rem"})
         ])),
 
         dbc.CardBody(
-            dbc.Row(visual_rows, justify="center", className="g-3")
+            html.Div(
+                visual_rows,
+                style={"display": "flex", "flexWrap": "wrap", "gap": "1rem", "justifyContent": "center"}
+            )
         )
     ], className="mb-4", style={"background-color": "#0d1b2a"})
 
@@ -106,18 +110,22 @@ app.title = "Live Pool Dashboard"
 # --- Layout ---
 app.layout = dbc.Container([
     dbc.Row([
-        dbc.Col(html.H3("Live Pool", className="text-center mb-2"), width=12),
-        dbc.Col(html.Div(id="last-update", className="text-center text-secondary"), width=12)
+        dbc.Col(html.H3("Live Pool"), width=8),
+        dbc.Col(html.Div(id="last-update", className="text-end text-secondary mt-2"), width=4)
     ]),
+
     dcc.Interval(id="auto-refresh", interval=60000, n_intervals=0),
-    html.H5("Current Pool", className="mt-4 text-center"),
+
+    html.H5("Current Pool", className="mt-4"),
     html.Div(id="current-pool"),
+
     html.Hr(),
-    dbc.Button("Show Previous Pools", id="toggle-collapse", color="info", className="mb-2", style={"width": "100%"}),
-    dbc.Collapse(id="previous-pools", is_open=False)
+    dbc.Button("Show Previous Pools", id="toggle-collapse", color="info", className="mb-2"),
+    dbc.Collapse(id="previous-pools", is_open=False),
+
 ], fluid=True, style={"background-color": "#0d1b2a"})
 
-# --- Callbacks ---
+# --- Callback ---
 @app.callback(
     Output("current-pool", "children"),
     Output("previous-pools", "children"),
@@ -141,6 +149,7 @@ def update_dashboard(n):
 
     return current, previous, f"Last updated: {pd.Timestamp.now():%d/%m/%Y %H:%M:%S}"
 
+# --- Collapse Toggle ---
 @app.callback(
     Output("previous-pools", "is_open"),
     Input("toggle-collapse", "n_clicks"),
@@ -153,5 +162,5 @@ def toggle_previous(n, is_open):
 # --- Run ---
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
-    print(f"✅ Starting Dash app on port {port}...")
+    print(f"\u2705 Starting Dash app on port {port}...")
     app.run(host="0.0.0.0", port=port, debug=False)
