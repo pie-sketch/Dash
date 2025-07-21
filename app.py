@@ -100,7 +100,7 @@ def generate_status_block(pool_df):
         ])),
 
         dbc.CardBody(
-            dbc.Row(visual_rows, justify="center")
+            dbc.Row(visual_rows, justify="start")
         )
     ], className="mb-4", style={"background-color": "#0d1b2a"})
 
