@@ -36,7 +36,6 @@ def get_status(row, pool_df):
         return "Complete", "success"
     return "In Progress", "warning"
 
-# --- Status Block Generator ---
 def generate_status_block(pool_df):
     tl_row = pool_df[pool_df["Pool Up"].notna()]
     if not tl_row.empty:
@@ -74,7 +73,7 @@ def generate_status_block(pool_df):
     return dbc.Card([
         dbc.CardHeader([
             html.Div([
-                html.Div(tl_name, className="tl-name"),
+                html.Div(f"{tl_name}", className="pool-title"),
                 html.Div(f"{pool_name} - {tab}", className="pool-title"),
                 html.Div(f"\u2B06 Pool Up: {pool_up}", className="pool-time"),
                 html.Div("🟢 Complete    🟠 In Progress", className="pool-status")
