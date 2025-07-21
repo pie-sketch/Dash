@@ -76,20 +76,17 @@ def generate_status_block(pool_df):
             color=color,
             striped=(status == "In Progress"),
             style={"height": "20px", "font-weight": "bold"},
-            children=load_text
+            children=html.Span(load_text, style={"color": "black", "fontWeight": "bold"})
         )
 
         visual_rows.append(
-            dbc.Col(
-                dbc.Card([
-                    dbc.CardBody([
-                        html.Div(name, style={"font-weight": "bold", "font-size": "1.1rem", "text-align": "center"}),
-                        load_bar,
-                        html.Div(status, style={"font-size": "0.9rem", "color": color, "text-align": "center"})
-                    ])
-                ], className="mb-2", style={"background-color": "#0d1b2a"}),
-                xs=12, sm=6, md=4, lg=3
-            )
+            dbc.Card([
+                dbc.CardBody([
+                    html.Div(name, style={"font-weight": "bold", "font-size": "1.1rem"}),
+                    load_bar,
+                    html.Div(status, style={"font-size": "0.9rem", "color": color})
+                ])
+            ], className="mb-2", style={"background-color": "#0d1b2a"})
         )
 
     return dbc.Card([
@@ -100,7 +97,10 @@ def generate_status_block(pool_df):
         ])),
 
         dbc.CardBody(
-            dbc.Row(visual_rows, className="g-2 justify-content-center")
+            html.Div(
+                visual_rows,
+                style={"display": "flex", "flexWrap": "wrap", "gap": "1rem", "justifyContent": "center"}
+            )
         )
     ], className="mb-4", style={"background-color": "#0d1b2a"})
 
@@ -111,14 +111,8 @@ app.title = "Live Pool Dashboard"
 # --- Layout ---
 app.layout = dbc.Container([
     dbc.Row([
-        dbc.Col(
-    html.Div("📊 Live Pool", style={
-        "textAlign": "center",
-        "fontSize": "1.4rem",  # slightly bigger than 1.2rem
-        "fontWeight": "bold"}),
-    width=12),
-
-    dbc.Col(html.Div(id="last-update", className="text-end text-secondary mt-2"), width=4)
+        dbc.Col(html.H3("\U0001F4CA Live Pool Dashboard"), width=8),
+        dbc.Col(html.Div(id="last-update", className="text-end text-secondary mt-2"), width=4)
     ]),
 
     dcc.Interval(id="auto-refresh", interval=60000, n_intervals=0),
@@ -127,10 +121,10 @@ app.layout = dbc.Container([
     html.Div(id="current-pool"),
 
     html.Hr(),
-    dbc.Button("Show Previous Pools", id="toggle-collapse", color="info", className="mb-2 w-100"),
+    dbc.Button("Show Previous Pools", id="toggle-collapse", color="info", className="mb-2"),
     dbc.Collapse(id="previous-pools", is_open=False),
 
-], fluid=True, style={"background-color": "#0d1b2a", "padding": "1rem"})
+], fluid=True, style={"background-color": "#0d1b2a"})
 
 # --- Callback ---
 @app.callback(
