@@ -204,4 +204,5 @@ def toggle_previous(n, is_open):
 # --- Run ---
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
+    print(f"✅ Starting Dash app on port {port}...")
     app.run(host="0.0.0.0", port=port, debug=False)
