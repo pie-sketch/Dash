@@ -1,11 +1,12 @@
-/* assets/custom.css */
 
+/* Glowing card hover effect */
 .glow-card:hover {
     box-shadow: 0 0 15px #33ccff;
     transition: 0.3s ease-in-out;
     transform: scale(1.05);
 }
 
+/* Card layout for each name/load */
 .card-content {
     background-color: #1a2639;
     padding: 10px;
@@ -13,4 +14,17 @@
     width: 90px;
     min-height: 80px;
     text-align: center;
+}
+
+/* Countdown timer styling */
+.countdown-glow {
+    color: #cccccc;
+    text-align: right;
+    animation: glow-pulse 2s infinite ease-in-out;
+}
+
+@keyframes glow-pulse {
+    0% { text-shadow: 0 0 2px #33ccff; }
+    50% { text-shadow: 0 0 10px #33ccff; }
+    100% { text-shadow: 0 0 2px #33ccff; }
 }
