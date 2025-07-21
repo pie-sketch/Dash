@@ -2,7 +2,8 @@ import dash
 import dash_bootstrap_components as dbc
 from dash import html, dcc, Input, Output, State
 import pandas as pd
-import plotly.express as px
+import numpy as np
+from datetime import datetime, timedelta
 import os
 
 # --- Google Sheet CSV ---
@@ -19,32 +20,94 @@ def load_data():
     df["Pool ID"] = df["Pool Name"] + " - " + df["Tab"]
     return df
 
-# --- Get Status Color ---
-def get_status(row):
-    if pd.isna(row["Start Time"]):
-        return "Not Started", "secondary"
-    elif pd.isna(row["End Time"]):
-        return "In Progress", "warning"
-    else:
+# --- Get Status ---
+def get_status(row, pool_df):
+    end = row["End Time"]
+    duration = row["Duration"]
+    load = row["Load"]
+
+    # TL
+    if not pd.isna(row["Pool Up"]):
+        return "TL", "secondary"
+
+    # Helper
+    if pd.notna(duration) and duration <= 0.83:
+        return "Helper", "secondary"
+
+    # Get total pool load from TL row
+    tl_row = pool_df[pool_df["Pool Up"].notna()]
+    total_pool_load = tl_row["Load"].max() if not tl_row.empty else 0
+
+    # Count active staff
+    active_staff = pool_df[
+        (pool_df["Pool Up"].isna()) &
+        (pool_df["Duration"] > 0.83)
+    ]
+    num_staff = len(active_staff)
+    per_person_target = np.ceil(total_pool_load / num_staff) if num_staff > 0 else 1
+
+    now = datetime.now()
+    if pd.notna(end) and (now - end) <= timedelta(minutes=1):
+        return "In Progress", "success"
+
+    if load >= per_person_target - 1:
         return "Complete", "success"
 
-# --- Status Table Generator ---
-def generate_status_table(pool_df):
-    rows = []
-    for _, row in pool_df.iterrows():
-        status, color = get_status(row)
-        pill = dbc.Badge(status, color=color, className="ms-1", pill=True)
-        rows.append(
-            html.Tr([
-                html.Td(row["Name"]),
-                html.Td(int(row["Load"])),
-                html.Td(pill)
-            ])
+    return "In Progress", "success"
+
+# --- Status Bar Generator ---
+def generate_status_block(pool_df):
+    tl_row = pool_df[pool_df["Pool Up"].notna()]
+    if not tl_row.empty:
+        tl = tl_row.iloc[0]
+        pool_name = tl["Pool Name"]
+        tab = tl["Tab"]
+        pool_up = tl["Pool Up"].strftime("%d/%m/%Y %H:%M:%S")
+        tl_name = tl["Name"]
+        total_load = tl["Load"]
+    else:
+        pool_name, tab, pool_up, tl_name, total_load = "-", "-", "-", "-", 0
+
+    active_rows = pool_df[
+        (pool_df["Pool Up"].isna()) &
+        (pool_df["Duration"] > 0.83)
+    ].copy()
+
+    num_staff = len(active_rows)
+    per_person_target = np.ceil(total_load / num_staff) if num_staff else 1
+
+    visual_rows = []
+    for _, row in active_rows.iterrows():
+        name = row["Name"]
+        load = row["Load"]
+        duration = row["Duration"]
+        status, color = get_status(row, pool_df)
+
+        load_percent = min(100, int((load / per_person_target) * 100)) if per_person_target else 0
+        load_bar = dbc.Progress(
+            value=load_percent,
+            color=color,
+            striped=(status == "In Progress"),
+            style={"height": "20px"},
         )
-    return dbc.Table(
-        [html.Thead(html.Tr([html.Th("Name"), html.Th("Load"), html.Th("Status")]))] + [html.Tbody(rows)],
-        bordered=True, hover=True, responsive=True, striped=True, className="mt-2"
-    )
+
+        visual_rows.append(
+            dbc.Row([
+                dbc.Col(html.Div(name), width=2),
+                dbc.Col(load_bar, width=6),
+                dbc.Col(html.Div(f"{duration:.1f} min" if pd.notna(duration) else "-"), width=2),
+                dbc.Col(dbc.Badge(status, color=color, className="ms-1", pill=True), width=2),
+            ], className="mb-2")
+        )
+
+    return dbc.Card([
+        dbc.CardHeader(html.Div([
+            html.H5(f"🧑 {tl_name}", className="text-center mb-0"),
+            html.Div(f"{pool_name} - {tab}", className="text-center text-muted"),
+            html.Div(f"⏫ Pool Up: {pool_up}", className="text-center text-secondary small")
+        ])),
+        dbc.CardBody(visual_rows)
+    ], className="mb-4")
 
 # --- App Init ---
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
@@ -59,11 +122,9 @@ app.layout = dbc.Container([
 
     dcc.Interval(id="auto-refresh", interval=60000, n_intervals=0),
 
-    # --- Current Pool ---
     html.H5("Current Pool", className="mt-4"),
     html.Div(id="current-pool"),
 
-    # --- Previous Pools (Collapsed) ---
     html.Hr(),
     dbc.Button("Show Previous Pools", id="toggle-collapse", color="info", className="mb-2"),
     dbc.Collapse(id="previous-pools", is_open=False),
@@ -86,11 +147,7 @@ def update_dashboard(n):
     pool_blocks = []
     for pid in pool_ids:
         sub_df = df[df["Pool ID"] == pid]
-        table = generate_status_table(sub_df)
-        block = dbc.Card([
-            dbc.CardHeader(html.H6(pid)),
-            dbc.CardBody(table)
-        ], className="mb-3")
+        block = generate_status_block(sub_df)
         pool_blocks.append(block)
 
     current = pool_blocks[0] if pool_blocks else html.Div("No current pool found.")
@@ -112,4 +169,3 @@ def toggle_previous(n, is_open):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
-
