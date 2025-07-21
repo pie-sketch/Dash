@@ -102,21 +102,21 @@ def generate_status_block(pool_df):
 
     return dbc.Card([
         dbc.CardHeader(html.Div([
-            html.H5(f"🧑 {tl_name}", className="text-center mb-0"),
-            html.Div(f"{pool_name} - {tab}", className="text-center text-muted"),
-            html.Div(f"⏫ Pool Up: {pool_up}", className="text-center text-secondary small")
+            html.Div(f"🧑 {tl_name}", className="text-center text-info small mb-0"),
+            html.Div(f"{pool_name} - {tab}", className="text-center text-muted", className="text-center text-info small"),
+            html.Div(f"⏫ Pool Up: {pool_up}", className="text-center text-info small", className="text-center text-secondary small")
         ])),
         dbc.CardBody(visual_rows)
     ], className="mb-4")
 
 # --- App Init ---
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
-app.title = "Live Pool"
+app.title = "Live Pool Dashboard"
 
 # --- Layout ---
 app.layout = dbc.Container([
     dbc.Row([
-        dbc.Col(html.H3("Live Pool"), width=8),
+        dbc.Col(html.H3("📊 Live Pool Dashboard"), width=8),
         dbc.Col(html.Div(id="last-update", className="text-end text-secondary mt-2"), width=4)
     ]),
 
