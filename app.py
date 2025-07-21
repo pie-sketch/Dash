@@ -33,7 +33,7 @@ def get_status(row, pool_df):
     num_staff = len(active_staff)
     target_load = total_pool_load / num_staff if num_staff else 1
 
-    if abs(row["Load"] - target_load) <= 1:
+    if abs(row["Load"] - target_load) <= 2:
         return "Complete", "success"
     return "In Progress", "warning"
 
