@@ -52,15 +52,15 @@ def generate_status_block(pool_df):
         pool_name = tl["Pool Name"]
         tab = tl["Tab"]
         pool_up = tl["Pool Up"].strftime("%d/%m/%Y %H:%M:%S")
-        total_load = tl["Load"]
     else:
-        pool_name, tab, pool_up, total_load = "-", "-", "-", 0
+        pool_name, tab, pool_up = "-", "-", "-"
 
     active_rows = pool_df[
         (pool_df["Pool Up"].isna()) &
         (pool_df["Load"] > 0)
     ].copy()
 
+    total_load = tl_row["Load"].max() if not tl_row.empty else 0
     num_staff = len(active_rows)
     target_load = total_load / num_staff if num_staff else 1
 
