@@ -3,8 +3,10 @@ import dash_bootstrap_components as dbc
 from dash import html, dcc, Input, Output, State
 import pandas as pd
 import numpy as np
+import plotly.express as px  # ✅ <-- Add this line
 from datetime import datetime, timedelta
 import os
+
 
 # --- Google Sheet CSV ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1LltJKL6wsXQt_6Qv3rwjfL9StACcMHsNQ2C_wTKw_iw/export?format=csv&gid=0"
