@@ -136,7 +136,7 @@ def update_dashboard(n):
 
     df = load_data()
     pool_groups = df[df["Pool Up"].notna()].groupby("Pool ID")["Pool Up"].max().reset_index()
-    pool_groups = pool_groups.sort_values("Pool Up", ascending=False).head(3)
+    pool_groups = pool_groups.sort_values("Pool Up", ascending=False).head(9)  # 1 current + 8 previous
     pool_ids = pool_groups["Pool ID"].tolist()
 
     pool_blocks = []
