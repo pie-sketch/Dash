@@ -1,128 +1,166 @@
 import dash
-from dash import html, dcc, Input, Output
+import dash_bootstrap_components as dbc
+from dash import html, dcc, Input, Output, State
 import pandas as pd
+import numpy as np
 import plotly.express as px
+from datetime import datetime, timedelta
+import os
 
-# --- Google Sheet CSV URL ---
+# --- Google Sheet CSV ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1LltJKL6wsXQt_6Qv3rwjfL9StACcMHsNQ2C_wTKw_iw/export?format=csv&gid=0"
 
-# --- Dash App ---
-app = dash.Dash(__name__)
-app.title = "Live Pool Dashboard"
-
-app.layout = html.Div(style={"backgroundColor": "#111", "color": "#FFF", "padding": "20px"}, children=[
-    html.H1("🕒 Live Pool Overview", style={"textAlign": "center"}),
-
-    dcc.Dropdown(id="pool-selector", placeholder="Select previous pool...", style={"width": "300px", "marginBottom": "20px"}),
-
-    dcc.Graph(id="pool-chart"),
-    html.Div(id="pool-table"),
-
-    dcc.Interval(id="auto-refresh", interval=60 * 1000, n_intervals=0),
-    html.Div(id="last-update", style={"textAlign": "right", "marginTop": "10px", "fontSize": "14px"})
-])
-
+# --- Load Data ---
 def load_data():
     df = pd.read_csv(SHEET_URL)
     df["Start Time"] = pd.to_datetime(df["Start Time"], errors="coerce", dayfirst=True)
     df["End Time"] = pd.to_datetime(df["End Time"], errors="coerce", dayfirst=True)
     df["Pool Up"] = pd.to_datetime(df["Pool Up"], errors="coerce", dayfirst=True)
     df["Load"] = pd.to_numeric(df["Load"], errors="coerce").fillna(0)
+    df["Duration"] = (df["End Time"] - df["Start Time"]).dt.total_seconds() / 60
+    df["Pool ID"] = df["Pool Name"] + " - " + df["Tab"]
     return df
 
-@app.callback(
-    [Output("pool-selector", "options"), Output("pool-selector", "value")],
-    Input("auto-refresh", "n_intervals")
-)
-def update_pool_list(n):
-    df = load_data()
-    pool_up_times = df[df["Pool Up"].notna()].groupby("Pool Name")["Pool Up"].min().sort_values(ascending=False)
-    current_pool = pool_up_times.index[0] if not pool_up_times.empty else None
-    previous_pools = pool_up_times.index[1:3].tolist()
+# --- Get Status ---
+def get_status(row, pool_df):
+    if not pd.isna(row["Pool Up"]):
+        return "TL", "secondary"
 
-    options = [{"label": pool, "value": pool} for pool in previous_pools]
-    return options, current_pool
+    if row["Load"] == 0:
+        return "Helper", "secondary"
 
-@app.callback(
-    [Output("pool-chart", "figure"),
-     Output("pool-table", "children"),
-     Output("last-update", "children")],
-    [Input("pool-selector", "value"),
-     Input("auto-refresh", "n_intervals")]
-)
-def update_dashboard(pool_name, n):
-    df = load_data()
-    if not pool_name:
-        return dash.no_update, dash.no_update, ""
+    tl_row = pool_df[pool_df["Pool Up"].notna()]
+    total_pool_load = tl_row["Load"].max() if not tl_row.empty else 0
 
-    pool_df = df[df["Pool Name"] == pool_name].copy()
-    pool_up_time = pool_df["Pool Up"].dropna().min()
-    initiators = pool_df[pool_df["Pool Up"].notna()]
-    total_load = initiators["Load"].sum()
-
-    helpers = pool_df[pool_df["Load"] < 5]["Name"].tolist()
-    manpower_df = pool_df[
+    active_staff = pool_df[
         (pool_df["Pool Up"].isna()) &
-        (~pool_df["Name"].isin(helpers)) &
-        (pool_df["Load"] >= 5)
+        (pool_df["Load"] > 0)
+    ]
+    num_staff = len(active_staff)
+    target_load = total_pool_load / num_staff if num_staff else 1
+
+    if abs(row["Load"] - target_load) <= 3:
+        return "Complete", "success"
+
+    return "In Progress", "warning"
+
+# --- Status Bar Generator ---
+def generate_status_block(pool_df):
+    tl_row = pool_df[pool_df["Pool Up"].notna()]
+    if not tl_row.empty:
+        tl = tl_row.iloc[0]
+        pool_name = tl["Pool Name"]
+        tab = tl["Tab"]
+        pool_up = tl["Pool Up"].strftime("%d/%m/%Y %H:%M:%S")
+    else:
+        pool_name, tab, pool_up = "-", "-", "-"
+
+    active_rows = pool_df[
+        (pool_df["Pool Up"].isna()) &
+        (pool_df["Load"] > 0)
     ].copy()
 
-    manpower_count = len(manpower_df)
-    expected_load = round(total_load / manpower_count, 2) if manpower_count else 0
-    load_range = (round(expected_load) - 2, round(expected_load) + 2)
+    total_load = tl_row["Load"].max() if not tl_row.empty else 0
+    num_staff = len(active_rows)
+    target_load = total_load / num_staff if num_staff else 1
 
-    def get_status(row):
-        if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]):
-            duration = (row["End Time"] - row["Start Time"]).total_seconds() / 60
-            if duration >= 15 and row["Load"] < 45:
-                return "delay"
-            if load_range[0] <= row["Load"] <= load_range[1]:
-                return "complete"
-            return "in progress"
-        return "in progress"
+    visual_rows = []
+    for _, row in active_rows.iterrows():
+        name = row["Name"]
+        load = row["Load"]
+        status, color = get_status(row, pool_df)
 
-    def format_duration(start, end):
-        if pd.isna(start) or pd.isna(end): return ""
-        delta = end - start
-        return f"{int(delta.total_seconds() // 60)}:{str(int(delta.total_seconds() % 60)).zfill(2)}"
+        load_percent = min(100, int((load / target_load) * 100)) if target_load else 0
+        load_bar = dbc.Progress(
+            value=load_percent,
+            color=color,
+            striped=(status == "In Progress"),
+            style={"height": "20px"},
+        )
 
-    manpower_df["Duration"] = manpower_df.apply(lambda r: format_duration(r["Start Time"], r["End Time"]), axis=1)
-    manpower_df["Status"] = manpower_df.apply(get_status, axis=1)
+        visual_rows.append(
+            dbc.Card([
+                dbc.CardBody([
+                    html.Div(name, style={"font-weight": "bold", "font-size": "1.1rem"}),
+                    load_bar,
+                    html.Div(status, style={"font-size": "0.9rem", "color": color})
+                ])
+            ], className="mb-2", style={"background-color": "#0d1b2a"})
+        )
 
-    fig = px.bar(
-        manpower_df,
-        x="Name", y="Load", color="Status",
-        color_discrete_map={
-            "complete": "#2ecc71",
-            "in progress": "#a8e6cf",
-            "delay": "#f39c12"
-        },
-        title=f"Load Distribution for {pool_name}"
-    )
-    fig.update_layout(
-        plot_bgcolor="#222", paper_bgcolor="#111",
-        font_color="white", title_font_color="white",
-        xaxis_title="", yaxis_title="Load",
-        height=450
-    )
+    return dbc.Card([
+        dbc.CardHeader(html.Div([
+            html.Div("\U0001F465 Manpower", className="text-center", style={"font-size": "1.2rem", "font-weight": "bold"}),
+            html.Div(f"{pool_name} - {tab}", className="text-center", style={"font-size": "1.2rem"}),
+            html.Div(f"\u2B06 Pool Up: {pool_up}", className="text-center", style={"font-size": "1.2rem"})
+        ])),
 
-    table = html.Table([
-        html.Thead(html.Tr([html.Th(col) for col in ["Name", "Start Time", "End Time", "Duration", "Load", "Status"]])),
-        html.Tbody([
-            html.Tr([
-                html.Td(row["Name"]),
-                html.Td(row["Start Time"].strftime("%d/%m %H:%M") if pd.notna(row["Start Time"]) else ""),
-                html.Td(row["End Time"].strftime("%d/%m %H:%M") if pd.notna(row["End Time"]) else ""),
-                html.Td(row["Duration"]),
-                html.Td(int(row["Load"])),
-                html.Td(row["Status"])
-            ]) for _, row in manpower_df.iterrows()
-        ])
-    ], style={"width": "100%", "marginTop": "20px", "color": "#fff", "backgroundColor": "#222"})
+        dbc.CardBody(
+            html.Div(
+                visual_rows,
+                style={"display": "flex", "flexWrap": "wrap", "gap": "1rem", "justifyContent": "center"}
+            )
+        )
+    ], className="mb-4", style={"background-color": "#0d1b2a"})
 
-    last_time = pd.Timestamp.now().strftime("%d/%m/%Y %H:%M:%S")
-    return fig, table, f"Last updated: {last_time}"
+# --- App Init ---
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
+app.title = "Live Pool Dashboard"
 
-# --- Run app ---
+# --- Layout ---
+app.layout = dbc.Container([
+    dbc.Row([
+        dbc.Col(html.H3("Live Pool"), width=8),
+        dbc.Col(html.Div(id="last-update", className="text-end text-secondary mt-2"), width=4)
+    ]),
+
+    dcc.Interval(id="auto-refresh", interval=60000, n_intervals=0),
+
+    html.H5("Current Pool", className="mt-4"),
+    html.Div(id="current-pool"),
+
+    html.Hr(),
+    dbc.Button("Show Previous Pools", id="toggle-collapse", color="info", className="mb-2"),
+    dbc.Collapse(id="previous-pools", is_open=False),
+
+], fluid=True, style={"background-color": "#0d1b2a"})
+
+# --- Callback ---
+@app.callback(
+    Output("current-pool", "children"),
+    Output("previous-pools", "children"),
+    Output("last-update", "children"),
+    Input("auto-refresh", "n_intervals")
+)
+def update_dashboard(n):
+    df = load_data()
+    pool_groups = df[df["Pool Up"].notna()].groupby("Pool ID")["Pool Up"].max().reset_index()
+    pool_groups = pool_groups.sort_values("Pool Up", ascending=False).head(3)
+    pool_ids = pool_groups["Pool ID"].tolist()
+
+    pool_blocks = []
+    for pid in pool_ids:
+        sub_df = df[df["Pool ID"] == pid]
+        block = generate_status_block(sub_df)
+        pool_blocks.append(block)
+
+    current = pool_blocks[0] if pool_blocks else html.Div("No current pool found.")
+    previous = pool_blocks[1:] if len(pool_blocks) > 1 else []
+
+    return current, previous, f"Last updated: {pd.Timestamp.now():%d/%m/%Y %H:%M:%S}"
+
+# --- Collapse Toggle ---
+@app.callback(
+    Output("previous-pools", "is_open"),
+    Input("toggle-collapse", "n_clicks"),
+    State("previous-pools", "is_open"),
+    prevent_initial_call=True
+)
+def toggle_previous(n, is_open):
+    return not is_open
+
+# --- Run ---
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    print(f"\u2705 Starting Dash app on port {port}...")
+    app.run(host="0.0.0.0", port=port, debug=False)
