@@ -100,14 +100,15 @@ def generate_status_block(pool_df):
             ], className="mb-2")
         )
 
-return dbc.Card([
-    dbc.CardHeader(html.Div([
-        html.Div(f"🧑 {tl_name}", className="text-center text-info small mb-0"),
-        html.Div(f"{pool_name} - {tab}", className="text-center text-info small"),
-        html.Div(f"⏫ Pool Up: {pool_up}", className="text-center text-info small")
-    ])),
-    dbc.CardBody(visual_rows)
-], className="mb-4")
+    # ✅ Return only after all rows are built
+    return dbc.Card([
+        dbc.CardHeader(html.Div([
+            html.Div(f"🧑 {tl_name}", className="text-center text-info small mb-0"),
+            html.Div(f"{pool_name} - {tab}", className="text-center text-info small"),
+            html.Div(f"⏫ Pool Up: {pool_up}", className="text-center text-info small")
+        ])),
+        dbc.CardBody(visual_rows)
+    ], className="mb-4")
 
 
 # --- App Init ---
