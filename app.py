@@ -96,26 +96,10 @@ def generate_status_block(pool_df):
         ])),
 
         dbc.CardBody(
-            dbc.Row([
-                dbc.Col(visual_rows, md=7),
-                dbc.Col(dcc.Graph(
-                    figure=px.bar(
-                        active_rows.sort_values("Load"),
-                        x="Name",
-                        y="Load",
-                        text="Load",
-                        color_discrete_sequence=["#66ff66"]
-                    ).update_layout(
-                        height=400,
-                        margin=dict(l=0, r=0, t=0, b=0),
-                        xaxis_title=None,
-                        yaxis_title="Load",
-                        plot_bgcolor='rgba(0,0,0,0)',
-                        paper_bgcolor='rgba(0,0,0,0)',
-                        font_color="white"
-                    )
-                ), md=5)
-            ])
+            html.Div(
+                visual_rows,
+                style={"display": "flex", "flexWrap": "wrap", "gap": "1rem", "justifyContent": "center"}
+            )
         )
     ], className="mb-4", style={"background-color": "#0d1b2a"})
 
