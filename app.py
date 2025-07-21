@@ -47,11 +47,11 @@ def get_status(row, pool_df):
     per_person_target = np.ceil(total_pool_load / num_staff) if num_staff > 0 else 1
 
     now = datetime.now()
+    if load >= per_person_target - 1 and pd.notna(end) and (now - end) > timedelta(minutes=1):
+        return "Complete", "success"
+
     if pd.notna(end) and (now - end) <= timedelta(minutes=1):
         return "In Progress", "success"
-
-    if load >= per_person_target - 1:
-        return "Complete", "success"
 
     return "In Progress", "success"
 
@@ -111,12 +111,12 @@ def generate_status_block(pool_df):
 
 # --- App Init ---
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
-app.title = "Live Pool Dashboard"
+app.title = "Live Pool"
 
 # --- Layout ---
 app.layout = dbc.Container([
     dbc.Row([
-        dbc.Col(html.H3("📊 Live Pool Dashboard"), width=8),
+        dbc.Col(html.H3("Live Pool"), width=8),
         dbc.Col(html.Div(id="last-update", className="text-end text-secondary mt-2"), width=4)
     ]),
 
