@@ -3,10 +3,9 @@ import dash_bootstrap_components as dbc
 from dash import html, dcc, Input, Output, State
 import pandas as pd
 import numpy as np
-import plotly.express as px  # ✅ <-- Add this line
+import plotly.express as px
 from datetime import datetime, timedelta
 import os
-
 
 # --- Google Sheet CSV ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1LltJKL6wsXQt_6Qv3rwjfL9StACcMHsNQ2C_wTKw_iw/export?format=csv&gid=0"
@@ -24,40 +23,24 @@ def load_data():
 
 # --- Get Status ---
 def get_status(row, pool_df):
-    end = row["End Time"]
-    duration = row["Duration"]
-    load = row["Load"]
-
-    # TL
     if not pd.isna(row["Pool Up"]):
         return "TL", "secondary"
 
-    # Helper
-    if pd.notna(duration) and duration <= 0.83:
+    if pd.notna(row["Duration"]) and row["Duration"] <= 0.83:
         return "Helper", "secondary"
-
-    # Get total pool load from TL row
-    tl_row = pool_df[pool_df["Pool Up"].notna()]
-    total_pool_load = tl_row["Load"].max() if not tl_row.empty else 0
 
     active_staff = pool_df[
         (pool_df["Pool Up"].isna()) &
         (pool_df["Duration"] > 0.83)
     ]
-    num_staff = len(active_staff)
-    per_person_target = np.ceil(total_pool_load / num_staff) if num_staff > 0 else 1
-
-    now = datetime.now()
     
-    # ✅ Fixed block here:
-    if abs(load - per_person_target) <= 2 and pd.notna(end) and (now - end) > timedelta(minutes=1):
+    max_duration = active_staff["Duration"].max()
+    duration_tolerance = 5  # minutes
+
+    if pd.notna(row["Duration"]) and abs(row["Duration"] - max_duration) <= duration_tolerance:
         return "Complete", "success"
 
-    if pd.notna(end) and (now - end) <= timedelta(minutes=1):
-        return "In Progress", "success"
-
-    return "In Progress", "success"
-
+    return "In Progress", "warning"
 
 # --- Status Bar Generator ---
 def generate_status_block(pool_df):
@@ -73,7 +56,7 @@ def generate_status_block(pool_df):
         pool_name, tab, pool_up, tl_name, total_load = "-", "-", "-", "-", 0
 
     active_rows = pool_df[
-        (pool_df["Pool Up"].isna()) &
+        (pool_df["Pool Up"].isna()) & 
         (pool_df["Duration"] > 0.83)
     ].copy()
 
@@ -83,67 +66,50 @@ def generate_status_block(pool_df):
     visual_rows = []
     for _, row in active_rows.iterrows():
         name = row["Name"]
-        load = row["Load"]
         duration = row["Duration"]
         status, color = get_status(row, pool_df)
 
-        load_percent = min(100, int((load / per_person_target) * 100)) if per_person_target else 0
-        load_bar = dbc.Progress(
-            value=load_percent,
-            color=color,
-            striped=(status == "In Progress"),
-            style={"height": "20px"},
-        )
-
-        start_time = row["Start Time"].strftime("%H:%M:%S") if pd.notna(row["Start Time"]) else "-"
-        end_time = row["End Time"].strftime("%H:%M:%S") if pd.notna(row["End Time"]) else "-"
-
         visual_rows.append(
             dbc.Row([
-                dbc.Col(html.Div(name), width=2),
-                dbc.Col(html.Div(start_time), width=2),
-                dbc.Col(html.Div(end_time), width=2),
-                dbc.Col(html.Div(f"{duration:.1f} min" if pd.notna(duration) else "-"), width=2),
-                dbc.Col(dbc.Badge(status, color=color, className="ms-1", pill=True), width="auto"),
+                dbc.Col(html.Div(name, className="text-white small fw-bold"), width=3),
+                dbc.Col(html.Div(f"{duration:.1f} min", className="text-white fw-bold fs-5"), width=3),
+                dbc.Col(dbc.Badge(status, color=color, className="ms-1 fs-6", pill=True), width="auto"),
             ], className="mb-2")
         )
-    # ✅ Return only after all rows are built
+
     return dbc.Card([
-    dbc.CardHeader(html.Div([
-        html.Div(f"🧑 {tl_name}", className="text-center text-info small mb-0"),
-        html.Div(f"{pool_name} - {tab}", className="text-center text-info small"),
-        html.Div(f"⏫ Pool Up: {pool_up}", className="text-center text-info small")
-    ])),
+        dbc.CardHeader(html.Div([
+            html.Div(f"🧑 {tl_name}", className="text-center text-info small mb-0"),
+            html.Div(f"{pool_name} - {tab}", className="text-center text-info small"),
+            html.Div(f"⏫ Pool Up: {pool_up}", className="text-center text-info small")
+        ])),
 
-    dbc.CardBody(
-        dbc.Row([
-            # Left section: staff bars
-            dbc.Col(visual_rows, md=7),
+        dbc.CardBody(
+            dbc.Row([
+                # Left section: staff duration + status
+                dbc.Col(visual_rows, md=5),
 
-            # Right section: bar chart
-            dbc.Col(dcc.Graph(
-                figure=px.bar(
-                    active_rows.sort_values("Duration"),
-                    x="Duration",
-                    y="Name",
-                    orientation="h",
-                    text=active_rows["Duration"].map(lambda d: f"{d:.1f} min"),
-                    color_discrete_sequence=["#66ff66"]
-                ).update_layout(
-                    height=400,
-                    margin=dict(l=0, r=0, t=0, b=0),
-                    yaxis_title=None,
-                    xaxis_title="Duration (min)",
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    font_color="white"
-                )
-            ), md=5)
-        ])
-    )
+                # Right section: vertical duration bar
+                dbc.Col(dcc.Graph(
+                    figure=px.bar(
+                        active_rows.sort_values("Duration"),
+                        x="Name",
+                        y="Duration",
+                        text=active_rows["Duration"].map(lambda d: f"{d:.1f} min"),
+                        color_discrete_sequence=["#66ff66"]
+                    ).update_traces(textposition="outside").update_layout(
+                        height=400,
+                        margin=dict(l=0, r=0, t=0, b=0),
+                        xaxis_title="Staff",
+                        yaxis_title="Duration (min)",
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        font_color="white"
+                    )
+                ), md=7)
+            ])
+        )
     ], className="mb-4")
-
-
 
 # --- App Init ---
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
