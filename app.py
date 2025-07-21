@@ -40,7 +40,6 @@ def get_status(row, pool_df):
     tl_row = pool_df[pool_df["Pool Up"].notna()]
     total_pool_load = tl_row["Load"].max() if not tl_row.empty else 0
 
-    # Count active staff
     active_staff = pool_df[
         (pool_df["Pool Up"].isna()) &
         (pool_df["Duration"] > 0.83)
@@ -49,13 +48,16 @@ def get_status(row, pool_df):
     per_person_target = np.ceil(total_pool_load / num_staff) if num_staff > 0 else 1
 
     now = datetime.now()
+    
+    # ✅ Fixed block here:
     if abs(load - per_person_target) <= 2 and pd.notna(end) and (now - end) > timedelta(minutes=1):
-    return "Complete", "success"
+        return "Complete", "success"
 
     if pd.notna(end) and (now - end) <= timedelta(minutes=1):
         return "In Progress", "success"
 
     return "In Progress", "success"
+
 
 # --- Status Bar Generator ---
 def generate_status_block(pool_df):
