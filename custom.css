@@ -1,0 +1,16 @@
+/* assets/custom.css */
+
+.glow-card:hover {
+    box-shadow: 0 0 15px #33ccff;
+    transition: 0.3s ease-in-out;
+    transform: scale(1.05);
+}
+
+.card-content {
+    background-color: #1a2639;
+    padding: 10px;
+    border-radius: 10px;
+    width: 90px;
+    min-height: 80px;
+    text-align: center;
+}
