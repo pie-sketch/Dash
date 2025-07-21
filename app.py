@@ -73,11 +73,12 @@ def generate_status_block(pool_df):
 
     return dbc.Card([
         dbc.CardHeader([
-            html.Div(tl_name, className="text-center", style={"font-size": "1.3rem", "fontWeight": "bold"}),
-            html.Div(f"{pool_name} - {tab}", className="text-center", style={"font-size": "1rem"}),
-            html.Div(f"\u2B06 Pool Up: {pool_up}", className="text-center", style={"font-size": "0.95rem"}),
-            html.Div("🟢 Complete    🟠 In Progress", className="text-center mt-2",
-                     style={"font-size": "0.95rem", "color": "lightgray"})
+            html.Div([
+                html.Div(tl_name, className="tl-name"),
+                html.Div(f"{pool_name} - {tab}", className="pool-title"),
+                html.Div(f"\u2B06 Pool Up: {pool_up}", className="pool-time"),
+                html.Div("🟢 Complete    🟠 In Progress", className="pool-status")
+            ], className="pool-header")
         ]),
         dbc.CardBody(
             html.Div(
@@ -92,6 +93,7 @@ def generate_status_block(pool_df):
             )
         )
     ], className="mb-4", style={"backgroundColor": "#0d1b2a", "borderRadius": "15px"})
+
 
 # --- App Init ---
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
