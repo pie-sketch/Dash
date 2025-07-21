@@ -28,7 +28,6 @@ def get_status(row, pool_df):
 
     tl_row = pool_df[pool_df["Pool Up"].notna()]
     total_pool_load = tl_row["Load"].max() if not tl_row.empty else 0
-
     active_staff = pool_df[(pool_df["Pool Up"].isna()) & (pool_df["Load"] > 0)]
     num_staff = len(active_staff)
     target_load = total_pool_load / num_staff if num_staff else 1
@@ -59,14 +58,16 @@ def generate_status_block(pool_df):
         name = row["Name"]
         load = row["Load"]
         status, color = get_status(row, pool_df)
+
         load_percent = min(100, int((load / target_load) * 100)) if target_load else 0
+        load_display = f"{int(load)}"
 
         visual_rows.append(
             html.Div([
                 html.Div(name, style={"font-weight": "bold", "font-size": "0.95rem", "text-align": "center"}),
                 dbc.Progress(value=load_percent, color=color, striped=(status == "In Progress"),
                              style={"height": "18px", "width": "100%"}),
-                html.Div(f"{load_percent}%", style={"font-size": "0.85rem", "text-align": "center", "marginTop": "4px"})
+                html.Div(load_display, style={"font-size": "0.85rem", "text-align": "center", "marginTop": "4px"})
             ], className="card-content glow-card")
         )
 
@@ -74,9 +75,9 @@ def generate_status_block(pool_df):
         dbc.CardHeader([
             html.Div(tl_name, className="text-center", style={"font-size": "1.3rem", "fontWeight": "bold"}),
             html.Div(f"{pool_name} - {tab}", className="text-center", style={"font-size": "1rem"}),
-            html.Div(f"\u2B06 Pool Up: {pool_up}", className="text-center", style={"font-size": "0.9rem"}),
-            html.Div("🟢 Complete &nbsp;&nbsp; 🟠 In Progress", className="text-center mt-2",
-                     style={"font-size": "0.85rem", "color": "lightgray"})
+            html.Div(f"\u2B06 Pool Up: {pool_up}", className="text-center", style={"font-size": "0.95rem"}),
+            html.Div("🟢 Complete    🟠 In Progress", className="text-center mt-2",
+                     style={"font-size": "0.95rem", "color": "lightgray"})
         ]),
         dbc.CardBody(
             html.Div(
@@ -100,10 +101,14 @@ app.title = "Live Pool Dashboard"
 app.layout = dbc.Container([
     dbc.Row([
         dbc.Col(html.H3("Live Pool", className="text-light"), xs=12, md=8),
-        dbc.Col(html.Div(id="last-update", className="text-end text-secondary mt-2", style={"font-size": "0.85rem"}), xs=12, md=4)
+        dbc.Col([
+            html.Div(id="last-update", className="text-end text-secondary", style={"font-size": "0.85rem"}),
+            html.Div(id="countdown-timer", className="text-end countdown-glow", style={"font-size": "0.8rem"})
+        ], xs=12, md=4)
     ], align="center", className="mb-3"),
 
     dcc.Interval(id="auto-refresh", interval=60000, n_intervals=0),
+    dcc.Interval(id="countdown-interval", interval=1000, n_intervals=0),
 
     html.H5("Current Pool", className="mt-4 text-light text-center"),
     html.Div(id="current-pool"),
@@ -114,6 +119,9 @@ app.layout = dbc.Container([
 
 ], fluid=True, style={"background-color": "#0d1b2a", "padding": "1rem"})
 
+# --- State Store for Countdown ---
+last_updated_timestamp = datetime.now()
+
 # --- Callback: Refresh Display ---
 @app.callback(
     Output("current-pool", "children"),
@@ -122,6 +130,9 @@ app.layout = dbc.Container([
     Input("auto-refresh", "n_intervals")
 )
 def update_dashboard(n):
+    global last_updated_timestamp
+    last_updated_timestamp = datetime.now()
+
     df = load_data()
     pool_groups = df[df["Pool Up"].notna()].groupby("Pool ID")["Pool Up"].max().reset_index()
     pool_groups = pool_groups.sort_values("Pool Up", ascending=False).head(3)
@@ -136,10 +147,21 @@ def update_dashboard(n):
     current = pool_blocks[0] if pool_blocks else html.Div("No current pool found.")
     previous = pool_blocks[1:] if len(pool_blocks) > 1 else []
 
-    updated_time = datetime.now().strftime("Last updated: %d/%m/%Y %H:%M:%S")
+    updated_time = last_updated_timestamp.strftime("Last updated: %d/%m/%Y %H:%M:%S")
     return current, previous, updated_time
 
-# --- Callback: Toggle Previous Pools ---
+# --- Callback: Countdown Timer ---
+@app.callback(
+    Output("countdown-timer", "children"),
+    Input("countdown-interval", "n_intervals")
+)
+def update_countdown(n):
+    global last_updated_timestamp
+    elapsed = (datetime.now() - last_updated_timestamp).seconds
+    remaining = max(0, 60 - elapsed)
+    return f"⏳ Refreshing in: {remaining:02d}s"
+
+# --- Collapse Toggle ---
 @app.callback(
     Output("previous-pools", "is_open"),
     Input("toggle-collapse", "n_clicks"),
@@ -152,5 +174,5 @@ def toggle_previous(n, is_open):
 # --- Run App ---
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
-    print(f"\u2705 Starting Dash app on port {port}...")
+    print(f"✅ Starting Dash app on port {port}...")
     app.run(host="0.0.0.0", port=port, debug=False)
