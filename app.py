@@ -25,19 +25,26 @@ def load_data():
 def get_status(row, pool_df):
     if not pd.isna(row["Pool Up"]):
         return "TL", "secondary"
-    if pd.notna(row["Duration"]) and row["Duration"] <= 0.83:
+
+    if row["Load"] == 0:
         return "Helper", "secondary"
+
+    tl_row = pool_df[pool_df["Pool Up"].notna()]
+    total_pool_load = tl_row["Load"].max() if not tl_row.empty else 0
+
     active_staff = pool_df[
         (pool_df["Pool Up"].isna()) &
-        (pool_df["Duration"] > 0.83)
+        (pool_df["Load"] > 0)
     ]
-    max_duration = active_staff["Duration"].max()
-    duration_tolerance = 5  # minutes
-    if pd.notna(row["Duration"]) and abs(row["Duration"] - max_duration) <= duration_tolerance:
+    num_staff = len(active_staff)
+    target_load = total_pool_load / num_staff if num_staff else 1
+
+    if abs(row["Load"] - target_load) <= 1:
         return "Complete", "success"
+
     return "In Progress", "warning"
 
-# --- Status Card Generator ---
+# --- Status Bar Generator ---
 def generate_status_block(pool_df):
     tl_row = pool_df[pool_df["Pool Up"].notna()]
     if not tl_row.empty:
@@ -45,68 +52,72 @@ def generate_status_block(pool_df):
         pool_name = tl["Pool Name"]
         tab = tl["Tab"]
         pool_up = tl["Pool Up"].strftime("%d/%m/%Y %H:%M:%S")
-        tl_name = tl["Name"]
         total_load = tl["Load"]
     else:
-        pool_name, tab, pool_up, tl_name, total_load = "-", "-", "-", "-", 0
+        pool_name, tab, pool_up, total_load = "-", "-", "-", 0
 
     active_rows = pool_df[
-        (pool_df["Pool Up"].isna()) & 
-        (pool_df["Duration"] > 0.83)
+        (pool_df["Pool Up"].isna()) &
+        (pool_df["Load"] > 0)
     ].copy()
 
     num_staff = len(active_rows)
-    per_person_target = np.ceil(total_load / num_staff) if num_staff else 1
-
-    active_rows["Status"] = active_rows.apply(lambda row: get_status(row, pool_df)[0], axis=1)
+    target_load = total_load / num_staff if num_staff else 1
 
     visual_rows = []
     for _, row in active_rows.iterrows():
         name = row["Name"]
+        load = row["Load"]
         status, color = get_status(row, pool_df)
 
+        load_percent = min(100, int((load / target_load) * 100)) if target_load else 0
+        load_bar = dbc.Progress(
+            value=load_percent,
+            color=color,
+            striped=(status == "In Progress"),
+            style={"height": "20px"},
+        )
+
         visual_rows.append(
-            dbc.Row([
-                dbc.Col(html.Div(name, className="text-white fs-5 fw-bold"), width=6),
-                dbc.Col(dbc.Badge(status, color=color, className="fs-6", pill=True), width="auto"),
-            ], className="mb-2")
+            dbc.Card([
+                dbc.CardBody([
+                    html.Div(name, style={"font-weight": "bold", "font-size": "1.1rem"}),
+                    load_bar,
+                    html.Div(status, style={"font-size": "0.9rem", "color": color})
+                ])
+            ], className="mb-2", style={"background-color": "#0d1b2a"})
         )
 
     return dbc.Card([
         dbc.CardHeader(html.Div([
-            html.H4(f"🧑 {tl_name}", className="text-center text-info fw-bold mb-1"),
-            html.H5(f"{pool_name} - {tab}", className="text-center text-white fw-bold mb-1"),
-            html.H6(f"⏫ Pool Up: {pool_up}", className="text-center text-secondary mb-0")
+            html.Div("\U0001F465 Manpower", className="text-center", style={"font-size": "1.2rem", "font-weight": "bold"}),
+            html.Div(f"{pool_name} - {tab}", className="text-center", style={"font-size": "1.2rem"}),
+            html.Div(f"\u2B06 Pool Up: {pool_up}", className="text-center", style={"font-size": "1.2rem"})
         ])),
 
         dbc.CardBody(
             dbc.Row([
-                # Left: Names + Statuses
-                dbc.Col(visual_rows, md=5),
-
-                # Right: Vertical bar chart
+                dbc.Col(visual_rows, md=7),
                 dbc.Col(dcc.Graph(
                     figure=px.bar(
-                        active_rows.sort_values("Duration"),
+                        active_rows.sort_values("Load"),
                         x="Name",
-                        y="Duration",
-                        color_discrete_sequence=["#66ff66"],
-                        custom_data=["Status", "Load"]
-                    ).update_traces(
-                        hovertemplate="<b>%{x}</b><br>Status: %{customdata[0]}<br>Load: %{customdata[1]}<extra></extra>"
+                        y="Load",
+                        text="Load",
+                        color_discrete_sequence=["#66ff66"]
                     ).update_layout(
                         height=400,
                         margin=dict(l=0, r=0, t=0, b=0),
-                        xaxis_title="Staff",
-                        yaxis_title="Duration (min)",
+                        xaxis_title=None,
+                        yaxis_title="Load",
                         plot_bgcolor='rgba(0,0,0,0)',
                         paper_bgcolor='rgba(0,0,0,0)',
                         font_color="white"
                     )
-                ), md=7)
+                ), md=5)
             ])
         )
-    ], className="mb-4")
+    ], className="mb-4", style={"background-color": "#0d1b2a"})
 
 # --- App Init ---
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
@@ -115,18 +126,22 @@ app.title = "Live Pool Dashboard"
 # --- Layout ---
 app.layout = dbc.Container([
     dbc.Row([
-        dbc.Col(html.H3("📊 Live Pool Dashboard"), width=8),
+        dbc.Col(html.H3("\U0001F4CA Live Pool Dashboard"), width=8),
         dbc.Col(html.Div(id="last-update", className="text-end text-secondary mt-2"), width=4)
     ]),
+
     dcc.Interval(id="auto-refresh", interval=60000, n_intervals=0),
+
     html.H5("Current Pool", className="mt-4"),
     html.Div(id="current-pool"),
+
     html.Hr(),
     dbc.Button("Show Previous Pools", id="toggle-collapse", color="info", className="mb-2"),
     dbc.Collapse(id="previous-pools", is_open=False),
-], fluid=True)
 
-# --- Update Main Pools ---
+], fluid=True, style={"background-color": "#0d1b2a"})
+
+# --- Callback ---
 @app.callback(
     Output("current-pool", "children"),
     Output("previous-pools", "children"),
@@ -160,8 +175,8 @@ def update_dashboard(n):
 def toggle_previous(n, is_open):
     return not is_open
 
-# --- Run Server ---
+# --- Run ---
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
-    print(f"✅ Starting Dash app on port {port}...")
+    print(f"\u2705 Starting Dash app on port {port}...")
     app.run(host="0.0.0.0", port=port, debug=False)
