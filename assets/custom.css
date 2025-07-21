@@ -28,3 +28,32 @@
     50% { text-shadow: 0 0 10px #33ccff; }
     100% { text-shadow: 0 0 2px #33ccff; }
 }
+
+/* ---- Pool Header Styling ---- */
+.pool-header {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.tl-name {
+    font-size: 1.6rem;
+    font-weight: bold;
+    color: gold;
+}
+
+.pool-title {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: white;
+}
+
+.pool-time {
+    font-size: 0.95rem;
+    color: #999;
+}
+
+.pool-status {
+    font-size: 0.95rem;
+    color: lightgray;
+    margin-top: 4px;
+}
