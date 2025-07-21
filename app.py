@@ -102,13 +102,40 @@ def generate_status_block(pool_df):
 
     # ✅ Return only after all rows are built
     return dbc.Card([
-        dbc.CardHeader(html.Div([
-            html.Div(f"🧑 {tl_name}", className="text-center text-info small mb-0"),
-            html.Div(f"{pool_name} - {tab}", className="text-center text-info small"),
-            html.Div(f"⏫ Pool Up: {pool_up}", className="text-center text-info small")
-        ])),
-        dbc.CardBody(visual_rows)
+    dbc.CardHeader(html.Div([
+        html.Div(f"🧑 {tl_name}", className="text-center text-info small mb-0"),
+        html.Div(f"{pool_name} - {tab}", className="text-center text-info small"),
+        html.Div(f"⏫ Pool Up: {pool_up}", className="text-center text-info small")
+    ])),
+
+    dbc.CardBody(
+        dbc.Row([
+            # Left section: staff bars
+            dbc.Col(visual_rows, md=7),
+
+            # Right section: bar chart
+            dbc.Col(dcc.Graph(
+                figure=px.bar(
+                    active_rows.sort_values("Duration"),
+                    x="Duration",
+                    y="Name",
+                    orientation="h",
+                    text=active_rows["Duration"].map(lambda d: f"{d:.1f} min"),
+                    color_discrete_sequence=["#66ff66"]
+                ).update_layout(
+                    height=400,
+                    margin=dict(l=0, r=0, t=0, b=0),
+                    yaxis_title=None,
+                    xaxis_title="Duration (min)",
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    font_color="white"
+                )
+            ), md=5)
+        ])
+    )
     ], className="mb-4")
+
 
 
 # --- App Init ---
