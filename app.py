@@ -66,7 +66,7 @@ def generate_status_block(pool_df):
         load_percent = min(100, int((load / target_load) * 100)) if target_load else 0
         load_display = f"{int(load)}"
 
-        # ✅ Duration in hh:mm:ss (no '0 days')
+        # Duration in hh:mm:ss
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]):
             time_taken = row["End Time"] - row["Start Time"]
             total_seconds = int(time_taken.total_seconds())
@@ -77,7 +77,7 @@ def generate_status_block(pool_df):
             time_taken = None
             duration_str = "-"
 
-        # 🔴 Late logic: scaled by manpower
+        # Late logic based on scaled expectation
         overdue = False
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]) and total_load:
             actual_duration = row["End Time"] - row["Start Time"]
@@ -122,7 +122,9 @@ def generate_status_block(pool_df):
                 ], style={"font-size": "0.8rem", "color": "#ccc", "marginTop": "6px"})
             ], className="pool-header", style={"text-align": "center"})
         ]),
-        dbc.CardBody(html.Div(visual_rows, className="seat-grid", style={"padding": "10px"}))
+        dbc.CardBody(
+            html.Div(visual_rows, className="seat-grid", style={"padding": "10px"})
+        )
     ], className="mb-4", style={"backgroundColor": "#0d1b2a", "borderRadius": "15px"})
 
 # --- App Init ---
@@ -145,6 +147,7 @@ app.layout = dbc.Container([
     dbc.Collapse(id="previous-pools", is_open=False)
 ], fluid=True, style={"background-color": "#0d1b2a", "padding": "1rem"})
 
+# --- Timestamp Tracker ---
 last_updated_timestamp = datetime.now()
 
 # --- Callbacks ---
@@ -157,6 +160,7 @@ last_updated_timestamp = datetime.now()
 def update_dashboard(n):
     global last_updated_timestamp
     last_updated_timestamp = datetime.now()
+
     df = load_data()
     pool_groups = df[df["Pool Up"].notna()].groupby("Pool ID")["Pool Up"].max().reset_index()
     pool_groups = pool_groups.sort_values("Pool Up", ascending=False).head(9)
@@ -164,9 +168,13 @@ def update_dashboard(n):
 
     pool_blocks = [generate_status_block(df[df["Pool ID"] == pid]) for pid in pool_ids]
     updated_time = last_updated_timestamp.strftime("Last updated: %d/%m/%Y %H:%M:%S")
+
     return pool_blocks[0], pool_blocks[1:], updated_time
 
-@app.callback(Output("countdown-timer", "children"), Input("countdown-interval", "n_intervals"))
+@app.callback(
+    Output("countdown-timer", "children"),
+    Input("countdown-interval", "n_intervals")
+)
 def update_countdown(n):
     global last_updated_timestamp
     elapsed = (datetime.now() - last_updated_timestamp).seconds
