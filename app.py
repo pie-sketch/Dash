@@ -1,4 +1,4 @@
-import dash
+""import dash
 import dash_bootstrap_components as dbc
 from dash import html, dcc, Input, Output, State
 import pandas as pd
@@ -83,16 +83,11 @@ def generate_pool_progress_row(df, recent_pool_ids):
         })
         rows.append(block)
 
-def generate_pool_progress_row(df, recent_pool_ids):
-    rows = []
-    for pid in recent_pool_ids:
-    # your logic...
-    
-        return html.Div([
+    return html.Div([
         html.Div("POOL PROGRESS", style={
-            "color": "#ccc", 
-            "fontWeight": "bold", 
-            "marginBottom": "4px", 
+            "color": "#ccc",
+            "fontWeight": "bold",
+            "marginBottom": "4px",
             "fontSize": "0.85rem"
         }),
         html.Div(
@@ -108,94 +103,7 @@ def generate_pool_progress_row(df, recent_pool_ids):
                 "paddingBottom": "6px"
             }
         )
-        ], style={"marginBottom": "12px"})
-
-
-# --- Status Block ---
-def generate_status_block(pool_df):
-    tl_row = pool_df[pool_df["Pool Up"].notna()]
-    if not tl_row.empty:
-        tl = tl_row.iloc[0]
-        short_name = tl.get("Pools", f"{tl['Pool Name']} - {tl['Tab']}")
-        pool_up_time = tl["Pool Up"]
-        pool_up = pool_up_time.strftime("%d/%m/%Y %H:%M:%S")
-        tl_name = tl["Name"]
-        total_count = int(tl["Load"])
-    else:
-        short_name, pool_up, tl_name = "-", "-", "-"
-        total_count = 0
-        pool_up_time = None
-
-    active_rows = pool_df[(pool_df["Pool Up"].isna()) & (pool_df["Load"] > 0)].copy()
-    total_load = tl_row["Load"].max() if not tl_row.empty else 0
-    manpower = len(active_rows)
-    target_load = total_load / manpower if manpower else 1
-    expected_time = pool_up_time + timedelta(hours=1) if pool_up_time else None
-
-    visual_rows = []
-    for _, row in active_rows.iterrows():
-        name = row["Name"]
-        load = row["Load"]
-        status, color = get_status(row, pool_df)
-
-        load_percent = min(100, int((load / target_load) * 100)) if target_load else 0
-        load_display = f"{int(load)}"
-
-        if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]):
-            actual_duration = row["End Time"] - row["Start Time"]
-            total_seconds = int(actual_duration.total_seconds())
-            hours, remainder = divmod(total_seconds, 3600)
-            minutes, seconds = divmod(remainder, 60)
-            duration_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-
-            # ✅ Late logic: based on max 150 load/hour per person
-            expected_duration = timedelta(minutes=(load / 150) * 60)
-            overdue = actual_duration > expected_duration
-        else:
-            duration_str = "-"
-            overdue = False
-
-        box_class = "card-content glow-card"
-        progress_wrapper_class = ""
-        if status == "In Progress":
-            progress_wrapper_class = "animated-progress"
-        if overdue:
-            progress_wrapper_class = "animated-late"
-            box_class += " overdue-box"
-
-        visual_rows.append(
-            html.Div([
-                html.Div(name, style={"fontWeight": "bold", "fontSize": "0.8rem", "textAlign": "center"}),
-                html.Div(dbc.Progress(value=load_percent, color=color, striped=(status == "In Progress"),
-                                      style={"height": "16px", "width": "100%"}),
-                         className=progress_wrapper_class),
-                html.Div(load_display, style={"fontSize": "0.75rem", "textAlign": "center", "marginTop": "4px"}),
-                html.Div(duration_str, style={"fontSize": "0.7rem", "textAlign": "center", "marginTop": "2px", "color": "#aaa"})
-            ], className=box_class)
-        )
-
-    return dbc.Card([
-        dbc.CardHeader([
-            html.Div([
-                html.Div(tl_name, className="tl-name"),
-                html.Div(short_name, className="pool-title"),
-                html.Div(f"⬆ Pool Up: {pool_up}", className="pool-time"),
-                html.Div([
-                    html.Span("🟢 Complete", className="complete"),
-                    html.Span("  🔶 In Progress", className="in-progress"),
-                    html.Span("  🔴 Late", className="late")
-                ], className="pool-status"),
-                html.Div([
-                    html.Span(f"Total Count: {total_count}", style={"marginRight": "12px"}),
-                    html.Span(f"Manpower: {manpower}", style={"marginRight": "12px"}),
-                    html.Span(f"Expected Pool Done: {expected_time.strftime('%H:%M:%S') if expected_time else '-'}")
-                ], style={"fontSize": "0.8rem", "color": "#ccc", "marginTop": "6px"})
-            ], className="pool-header", style={"textAlign": "center"})
-        ]),
-        dbc.CardBody(
-            html.Div(visual_rows, className="seat-grid", style={"padding": "10px"})
-        )
-    ], className="mb-4", style={"backgroundColor": "#0d1b2a", "borderRadius": "15px"})
+    ], style={"marginBottom": "12px"})
 
 # --- App Init ---
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
@@ -231,7 +139,7 @@ def update_dashboard(n):
 
     df = load_data()
     pool_groups = df[df["Pool Up"].notna()].groupby("Pool ID")["Pool Up"].max().reset_index()
-    pool_groups = pool_groups.sort_values("Pool Up", ascending=False).head(9)
+    pool_groups = pool_groups.sort_values("Pool Up", ascending=False).head(15)
     pool_ids = pool_groups["Pool ID"].tolist()
 
     progress_row = generate_pool_progress_row(df, pool_ids)
@@ -239,6 +147,7 @@ def update_dashboard(n):
 
     updated_time = last_updated_timestamp.strftime("Last updated: %d/%m/%Y %H:%M:%S")
     return [progress_row, pool_blocks[0]], pool_blocks[1:], updated_time
+
 
 @app.callback(
     Output("countdown-timer", "children"),
