@@ -5,7 +5,6 @@
     transform: scale(1.05);
 }
 
-/* Card layout for each name/load */
 .card-content {
     background-color: #1a2639;
     padding: 10px;
@@ -16,7 +15,26 @@
     transition: transform 0.3s ease;
 }
 
-/* Countdown timer styling */
+/* Animate orange progress */
+.animated-progress {
+    background: repeating-linear-gradient(45deg, #ffa500 0, #ffa500 10px, #ffcc80 10px, #ffcc80 20px);
+    background-size: 200% 200%;
+    animation: moveStripes 2s linear infinite;
+}
+
+/* Animate red for late */
+.animated-late {
+    background: repeating-linear-gradient(45deg, #ff4444 0, #ff4444 10px, #ff9999 10px, #ff9999 20px);
+    background-size: 200% 200%;
+    animation: moveStripes 1.5s linear infinite;
+}
+
+@keyframes moveStripes {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 100% 100%; }
+}
+
+/* Countdown glow */
 .countdown-glow {
     color: #cccccc;
     text-align: right;
@@ -29,12 +47,10 @@
     100% { text-shadow: 0 0 2px #33ccff; }
 }
 
-/* ---- Pool Header Styling ---- */
+/* Pool headers */
 .pool-header {
     text-align: center;
     margin-bottom: 10px;
-    position: relative;
-    padding: 10px 0;
 }
 
 .tl-name {
@@ -56,97 +72,35 @@
 
 .pool-status {
     font-size: 0.95rem;
-    color: lightgray;
     margin-top: 4px;
-    white-space: nowrap;
 }
 
 .pool-status span {
     margin-right: 10px;
-    animation: glow-pulse 2s infinite ease-in-out;
 }
 
 .pool-status .complete { color: #00ff88; }
 .pool-status .in-progress { color: orange; }
 .pool-status .late { color: red; }
 
-/* 🆕 Header Info (Counts) with Animation */
-.pool-info-box {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    text-align: right;
-    animation: fadeSlideIn 0.8s ease-in-out;
-}
-
-.pool-info-box div {
-    font-size: 0.8rem;
-    color: #aaa;
-    line-height: 1.3;
-}
-
-@keyframes fadeSlideIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Seat-style grid layout */
-.seat-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-    gap: 10px;
-    justify-items: center;
-}
-
-/* 📱 Responsive Scaling */
-@media (max-width: 480px) {
-    .tl-name {
-        font-size: 1rem;
-    }
-
-    .pool-title {
-        font-size: 0.85rem;
-    }
-
-    .pool-time,
-    .pool-status,
-    .pool-info-box div {
-        font-size: 0.7rem;
-    }
-
-    .card-content {
-        width: 80px;
-        padding: 8px;
-    }
-}
-
-/* 🔴 Overdue card box */
+/* Overdue box */
 .overdue-box {
     background-color: #3b0d0d !important;
     border: 1px solid red;
 }
 
-/* Animated shimmer effect for progress bar */
-.animated-progress .progress-bar {
-    background-image: linear-gradient(45deg, rgba(255,165,0,0.5) 25%, transparent 25%, transparent 50%, rgba(255,165,0,0.5) 50%, rgba(255,165,0,0.5) 75%, transparent 75%, transparent);
-    background-size: 40px 40px;
-    animation: move-stripes 1s linear infinite;
+/* Responsive font */
+@media (max-width: 480px) {
+    .tl-name { font-size: 1rem; }
+    .pool-title { font-size: 0.85rem; }
+    .pool-time, .pool-status, .pool-info-box div { font-size: 0.7rem; }
+    .card-content { width: 80px; padding: 8px; }
 }
 
-.animated-late .progress-bar {
-    background-color: red !important;
-    background-image: linear-gradient(45deg, rgba(255, 0, 0, 0.6) 25%, transparent 25%, transparent 50%, rgba(255, 0, 0, 0.6) 50%, rgba(255, 0, 0, 0.6) 75%, transparent 75%, transparent);
-    background-size: 40px 40px;
-    animation: move-stripes 1s linear infinite;
-}
-
-@keyframes move-stripes {
-    0% { background-position: 0 0; }
-    100% { background-position: 40px 0; }
+/* Seat grid */
+.seat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 10px;
+    justify-items: center;
 }
