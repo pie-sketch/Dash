@@ -57,3 +57,11 @@
     color: lightgray;
     margin-top: 4px;
 }
+
+/* Seat-style grid layout */
+.seat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 10px;
+    justify-items: center;
+}
