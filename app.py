@@ -36,7 +36,6 @@ def get_status(row, pool_df):
         return "Complete", "success"
     return "In Progress", "warning"
 
-# --- Main Card Generator ---
 def generate_status_block(pool_df):
     tl_row = pool_df[pool_df["Pool Up"].notna()]
     if not tl_row.empty:
@@ -57,6 +56,7 @@ def generate_status_block(pool_df):
     num_staff = len(active_rows)
     target_load = total_load / num_staff if num_staff else 1
     expected_time = pool_up_time + timedelta(hours=1, minutes=5) if pool_up_time else None
+    expected_duration = timedelta(hours=1, minutes=5)
 
     visual_rows = []
     for _, row in active_rows.iterrows():
@@ -67,21 +67,22 @@ def generate_status_block(pool_df):
         load_percent = min(100, int((load / target_load) * 100)) if target_load else 0
         load_display = f"{int(load)}"
 
-        # ✅ Duration in hh:mm:ss (modulo 24h, no 'days' or 25+)
+        # ✅ Duration in hh:mm:ss (wrap after 24h, no '0 days')
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]):
             time_taken = row["End Time"] - row["Start Time"]
             total_seconds = int(time_taken.total_seconds())
-            hours, remainder = divmod(total_seconds % 86400, 3600)  # wrap after 24h
+            hours, remainder = divmod(total_seconds % 86400, 3600)
             minutes, seconds = divmod(remainder, 60)
             duration_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
         else:
             time_taken = None
             duration_str = "-"
 
-
+        # 🔴 Late only if actual duration > expected
         overdue = False
-        if expected_time and pd.notna(row["End Time"]):
-            overdue = row["End Time"] > expected_time
+        if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]):
+            actual_duration = row["End Time"] - row["Start Time"]
+            overdue = actual_duration > expected_duration
 
         box_class = "card-content glow-card"
         progress_wrapper_class = ""
@@ -119,6 +120,7 @@ def generate_status_block(pool_df):
         ]),
         dbc.CardBody(html.Div(visual_rows, className="seat-grid", style={"padding": "10px"}))
     ], className="mb-4", style={"backgroundColor": "#0d1b2a", "borderRadius": "15px"})
+
 
 
 # --- App Init ---
