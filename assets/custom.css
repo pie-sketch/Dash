@@ -196,3 +196,11 @@
     color: red;
     animation: glow-late 1.5s infinite ease-in-out;
 }
+
+body {
+    background-color: #0d1b2a !important;
+}
+
+html {
+    background-color: #0d1b2a !important;
+}
