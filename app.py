@@ -138,7 +138,7 @@ app.layout = dbc.Container([
         dbc.Col(html.Div(id="countdown-timer", className="text-end countdown-glow", style={"font-size": "0.75rem"}), width=6)
     ], align="center"),
 
-    dcc.Interval(id="auto-refresh", interval=15000, n_intervals=0),
+    dcc.Interval(id="auto-refresh", interval=180000, n_intervals=0),  # 3 minutes
     dcc.Interval(id="countdown-interval", interval=1000, n_intervals=0),
 
     html.Div(id="current-pool"),
@@ -178,8 +178,9 @@ def update_dashboard(n):
 def update_countdown(n):
     global last_updated_timestamp
     elapsed = (datetime.now() - last_updated_timestamp).seconds
-    remaining = max(0, 15 - elapsed)
+    remaining = max(0, 180 - elapsed)  # 👈 change 15 ➜ 180
     return f"\u23F3 Refreshing in: {remaining:02d}s"
+
 
 @app.callback(
     Output("previous-pools", "is_open"),
