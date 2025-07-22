@@ -106,43 +106,72 @@
 }
 
 @keyframes glow-complete {
-  0% { text-shadow: 0 0 2px #00ff88; }
-  50% { text-shadow: 0 0 10px #00ff88; }
-  100% { text-shadow: 0 0 2px #00ff88; }
+    0% { text-shadow: 0 0 2px #00ff88; }
+    50% { text-shadow: 0 0 10px #00ff88; }
+    100% { text-shadow: 0 0 2px #00ff88; }
 }
 
 @keyframes glow-inprogress {
-  0% { text-shadow: 0 0 2px orange; }
-  50% { text-shadow: 0 0 10px orange; }
-  100% { text-shadow: 0 0 2px orange; }
+    0% { text-shadow: 0 0 2px orange; }
+    50% { text-shadow: 0 0 10px orange; }
+    100% { text-shadow: 0 0 2px orange; }
 }
 
 @keyframes glow-late {
-  0% { text-shadow: 0 0 2px red; }
-  50% { text-shadow: 0 0 10px red; }
-  100% { text-shadow: 0 0 2px red; }
+    0% { text-shadow: 0 0 2px red; }
+    50% { text-shadow: 0 0 10px red; }
+    100% { text-shadow: 0 0 2px red; }
 }
 
 .pool-status .complete {
-  color: #00ff88;
-  animation: glow-complete 1.5s infinite ease-in-out;
+    color: #00ff88;
+    animation: glow-complete 1.5s infinite ease-in-out;
 }
 
 .pool-status .in-progress {
-  color: orange;
-  animation: glow-inprogress 1.5s infinite ease-in-out;
+    color: orange;
+    animation: glow-inprogress 1.5s infinite ease-in-out;
 }
 
 .pool-status .late {
-  color: red;
-  animation: glow-late 1.5s infinite ease-in-out;
+    color: red;
+    animation: glow-late 1.5s infinite ease-in-out;
 }
 
-/* Add in assets/custom.css */
-.mini-pool-box::-webkit-scrollbar {
-  height: 4px;
-}
-.mini-pool-box::-webkit-scrollbar-thumb {
-  background-color: #555;
+/* POOL PROGRESS SECTION — NEW */
+
+/* 1. Scrollable container */
+.pool-progress-row {
+    display: flex;
+    overflow-x: auto;
+    gap: 10px;
+    padding-bottom: 6px;
 }
 
+/* 2. Custom scrollbar (optional) */
+.pool-progress-row::-webkit-scrollbar {
+    height: 5px;
+}
+.pool-progress-row::-webkit-scrollbar-thumb {
+    background-color: #666;
+    border-radius: 3px;
+}
+
+/* 3. Header container */
+.pool-progress-container {
+    margin-bottom: 12px;
+}
+
+.pool-progress-container .title {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #ccc;
+    margin-bottom: 6px;
+}
+
+/* 4. Mini box hover effect */
+.mini-pool-box:hover {
+    box-shadow: 0 0 10px #33ccff;
+    transform: scale(1.03);
+    transition: all 0.3s ease-in-out;
+}
