@@ -45,16 +45,16 @@ def generate_status_block(pool_df):
         pool_up_time = tl["Pool Up"]
         pool_up = pool_up_time.strftime("%d/%m/%Y %H:%M:%S")
         tl_name = tl["Name"]
-        total_count = int(tl["Count"]) if "Count" in tl else 0
+        total_count = int(tl.get("Count", 0)) if "Count" in tl else 0
     else:
         pool_name, tab, pool_up, tl_name = "-", "-", "-", "-"
+        pool_up_time = pd.NaT
         total_count = 0
 
     active_rows = pool_df[(pool_df["Pool Up"].isna()) & (pool_df["Load"] > 0)].copy()
     total_load = tl_row["Load"].max() if not tl_row.empty else 0
     num_staff = len(active_rows)
     target_load = total_load / num_staff if num_staff else 1
-
     expected_time = pool_up_time + timedelta(hours=1, minutes=5) if not pd.isna(pool_up_time) else "-"
 
     visual_rows = []
@@ -62,45 +62,43 @@ def generate_status_block(pool_df):
         name = row["Name"]
         load = row["Load"]
         status, color = get_status(row, pool_df)
-
         load_percent = min(100, int((load / target_load) * 100)) if target_load else 0
         load_display = f"{int(load)}"
-
         completion_time = row["End Time"] - row["Start Time"]
         completion_time_str = str(timedelta(seconds=int(completion_time.total_seconds()))) if pd.notna(completion_time) else "-"
 
         visual_rows.append(
             html.Div([
                 html.Div(name, style={"font-weight": "bold", "font-size": "0.8rem", "text-align": "center"}),
-                dbc.Progress(value=load_percent, color=color, striped=(status == "In Progress"), style={"height": "16px", "width": "100%"}),
+                dbc.Progress(value=load_percent, color=color, striped=(status == "In Progress"), style={"height": "16px"}),
                 html.Div(load_display, style={"font-size": "0.75rem", "text-align": "center", "marginTop": "4px"}),
                 html.Div(completion_time_str, style={"font-size": "0.7rem", "text-align": "center", "marginTop": "2px", "color": "#aaa"})
             ], className="card-content glow-card")
         )
 
+    # --- Return card layout ---
     return dbc.Card([
         dbc.CardHeader([
             html.Div([
                 html.Div([
-                    html.Div([f"Total Count: {total_count}"], style={"font-size": "0.8rem", "color": "#aaa"}),
-                    html.Div([f"Individual Count: {num_staff}"], style={"font-size": "0.8rem", "color": "#aaa"}),
-                    html.Div([f"Expected Completion: {expected_time.strftime('%H:%M:%S') if expected_time != '-' else '-'}"], style={"font-size": "0.8rem", "color": "#aaa"})
-                ], style={"text-align": "left", "position": "absolute"}),
+                    html.Div(f"{tl_name}", className="tl-name"),
+                    html.Div(f"{pool_name} - {tab}", className="pool-title"),
+                    html.Div(f"⬆ Pool Up: {pool_up}", className="pool-time"),
+                    html.Div("🟢 Complete    🔶 In Progress", className="pool-status")
+                ], style={"text-align": "center"}),
 
-                html.Div(f"{tl_name}", className="pool-title"),
-                html.Div(f"{pool_name} - {tab}", className="pool-title"),
-                html.Div(f"⬆ Pool Up: {pool_up}", className="pool-time"),
-                html.Div("🟢 Complete    🔶 In Progress", className="pool-status")
-            ], className="pool-header")
+                html.Div([
+                    html.Div(f"Total Count: {total_count}", style={"font-size": "0.75rem", "color": "#aaa"}),
+                    html.Div(f"Individual Count: {num_staff}", style={"font-size": "0.75rem", "color": "#aaa"}),
+                    html.Div(f"Expected Completion: {expected_time.strftime('%H:%M:%S') if expected_time != '-' else '-'}", style={"font-size": "0.75rem", "color": "#aaa"}),
+                ], style={"position": "absolute", "right": "10px", "top": "10px", "text-align": "right"})
+            ], className="pool-header", style={"position": "relative"})
         ]),
         dbc.CardBody(
-            html.Div(
-                visual_rows,
-                className="seat-grid",
-                style={"padding": "10px"}
-            )
+            html.Div(visual_rows, className="seat-grid", style={"padding": "10px", "justifyContent": "center"})
         )
     ], className="mb-4", style={"backgroundColor": "#0d1b2a", "borderRadius": "15px"})
+
 
 # --- App Init ---
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
