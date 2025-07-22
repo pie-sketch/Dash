@@ -70,10 +70,11 @@ def generate_status_block(pool_df):
         # Duration format (hh:mm:ss)
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]):
             time_taken = row["End Time"] - row["Start Time"]
-            duration_str = str(time_taken).split(".")[0]
+            duration_str = str(timedelta(seconds=int(time_taken.total_seconds())))
         else:
             time_taken = None
             duration_str = "-"
+        
 
         overdue = False
         if expected_time and pd.notna(row["End Time"]):
