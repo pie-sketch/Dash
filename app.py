@@ -16,7 +16,6 @@ def load_data():
     df["End Time"] = pd.to_datetime(df["End Time"], errors="coerce", dayfirst=True)
     df["Pool Up"] = pd.to_datetime(df["Pool Up"], errors="coerce", dayfirst=True)
     df["Load"] = pd.to_numeric(df["Load"], errors="coerce").fillna(0)
-    df["Duration"] = (df["End Time"] - df["Start Time"]).dt.total_seconds() / 60
     df["Pool ID"] = df["Pool Name"] + " - " + df["Tab"]
     return df
 
@@ -37,6 +36,7 @@ def get_status(row, pool_df):
         return "Complete", "success"
     return "In Progress", "warning"
 
+# --- Main Card Generator ---
 def generate_status_block(pool_df):
     tl_row = pool_df[pool_df["Pool Up"].notna()]
     if not tl_row.empty:
@@ -46,18 +46,16 @@ def generate_status_block(pool_df):
         pool_up_time = tl["Pool Up"]
         pool_up = pool_up_time.strftime("%d/%m/%Y %H:%M:%S")
         tl_name = tl["Name"]
-        total_count = int(tl["Load"]) if "Load" in tl else 0  # ✅ FIX: take Load from TL row
+        total_count = int(tl["Load"]) if "Load" in tl else 0
     else:
         pool_name, tab, pool_up, tl_name = "-", "-", "-", "-"
         total_count = 0
         pool_up_time = None
 
-    # ✅ Staff rows
     active_rows = pool_df[(pool_df["Pool Up"].isna()) & (pool_df["Load"] > 0)].copy()
     total_load = tl_row["Load"].max() if not tl_row.empty else 0
     num_staff = len(active_rows)
     target_load = total_load / num_staff if num_staff else 1
-
     expected_time = pool_up_time + timedelta(hours=1, minutes=5) if pool_up_time else None
 
     visual_rows = []
@@ -69,33 +67,38 @@ def generate_status_block(pool_df):
         load_percent = min(100, int((load / target_load) * 100)) if target_load else 0
         load_display = f"{int(load)}"
 
-        # ✅ Duration in hh:mm:ss
+        # Duration format (hh:mm:ss)
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]):
             time_taken = row["End Time"] - row["Start Time"]
-            duration_str = str(time_taken).split(".")[0]  # format hh:mm:ss
+            duration_str = str(time_taken).split(".")[0]
         else:
             time_taken = None
             duration_str = "-"
 
-        # 🔴 Flag if time exceeded expected
         overdue = False
         if expected_time and pd.notna(row["End Time"]):
             overdue = row["End Time"] > expected_time
 
         box_class = "card-content glow-card"
+        progress_wrapper_class = ""
+        if status == "In Progress":
+            progress_wrapper_class = "animated-progress"
         if overdue:
+            progress_wrapper_class = "animated-late"
             box_class += " overdue-box"
 
         visual_rows.append(
             html.Div([
                 html.Div(name, style={"font-weight": "bold", "font-size": "0.8rem", "text-align": "center"}),
-                dbc.Progress(value=load_percent, color=color, striped=(status == "In Progress"), style={"height": "16px", "width": "100%"}),
+                html.Div(
+                    dbc.Progress(value=load_percent, color=color, striped=(status == "In Progress"), style={"height": "16px", "width": "100%"}),
+                    className=progress_wrapper_class
+                ),
                 html.Div(load_display, style={"font-size": "0.75rem", "text-align": "center", "marginTop": "4px"}),
                 html.Div(duration_str, style={"font-size": "0.7rem", "text-align": "center", "marginTop": "2px", "color": "#aaa"})
             ], className=box_class)
         )
 
-    # ✅ Header layout (CENTERED + Info below)
     return dbc.Card([
         dbc.CardHeader([
             html.Div([
@@ -110,11 +113,8 @@ def generate_status_block(pool_df):
                 ], style={"font-size": "0.8rem", "color": "#ccc", "marginTop": "6px"})
             ], className="pool-header", style={"text-align": "center"})
         ]),
-        dbc.CardBody(
-            html.Div(visual_rows, className="seat-grid", style={"padding": "10px"})
-        )
+        dbc.CardBody(html.Div(visual_rows, className="seat-grid", style={"padding": "10px"}))
     ], className="mb-4", style={"backgroundColor": "#0d1b2a", "borderRadius": "15px"})
-
 
 
 # --- App Init ---
@@ -124,8 +124,8 @@ app.title = "Live Pool Dashboard"
 # --- Layout ---
 app.layout = dbc.Container([
     dbc.Row([
-        dbc.Col([html.Div(id="last-update", className="text-start text-secondary", style={"font-size": "0.75rem"})], width=6),
-        dbc.Col([html.Div(id="countdown-timer", className="text-end countdown-glow", style={"font-size": "0.75rem"})], width=6)
+        dbc.Col(html.Div(id="last-update", className="text-start text-secondary", style={"font-size": "0.75rem"}), width=6),
+        dbc.Col(html.Div(id="countdown-timer", className="text-end countdown-glow", style={"font-size": "0.75rem"}), width=6)
     ], align="center"),
 
     dcc.Interval(id="auto-refresh", interval=15000, n_intervals=0),
@@ -135,11 +135,11 @@ app.layout = dbc.Container([
     html.Hr(className="bg-light"),
     dbc.Button("Show Previous Pools", id="toggle-collapse", color="info", className="mb-2", style={"width": "100%"}),
     dbc.Collapse(id="previous-pools", is_open=False)
-
 ], fluid=True, style={"background-color": "#0d1b2a", "padding": "1rem"})
 
 last_updated_timestamp = datetime.now()
 
+# --- Callbacks ---
 @app.callback(
     Output("current-pool", "children"),
     Output("previous-pools", "children"),
@@ -149,24 +149,16 @@ last_updated_timestamp = datetime.now()
 def update_dashboard(n):
     global last_updated_timestamp
     last_updated_timestamp = datetime.now()
-
     df = load_data()
     pool_groups = df[df["Pool Up"].notna()].groupby("Pool ID")["Pool Up"].max().reset_index()
     pool_groups = pool_groups.sort_values("Pool Up", ascending=False).head(9)
     pool_ids = pool_groups["Pool ID"].tolist()
 
-    pool_blocks = []
-    for pid in pool_ids:
-        sub_df = df[df["Pool ID"] == pid]
-        pool_blocks.append(generate_status_block(sub_df))
-
+    pool_blocks = [generate_status_block(df[df["Pool ID"] == pid]) for pid in pool_ids]
     updated_time = last_updated_timestamp.strftime("Last updated: %d/%m/%Y %H:%M:%S")
     return pool_blocks[0], pool_blocks[1:], updated_time
 
-@app.callback(
-    Output("countdown-timer", "children"),
-    Input("countdown-interval", "n_intervals")
-)
+@app.callback(Output("countdown-timer", "children"), Input("countdown-interval", "n_intervals"))
 def update_countdown(n):
     global last_updated_timestamp
     elapsed = (datetime.now() - last_updated_timestamp).seconds
