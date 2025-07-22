@@ -46,18 +46,19 @@ def generate_status_block(pool_df):
         pool_up_time = tl["Pool Up"]
         pool_up = pool_up_time.strftime("%d/%m/%Y %H:%M:%S")
         tl_name = tl["Name"]
-        total_count = int(tl["Count"]) if "Count" in tl else 0
+        total_count = int(tl["Load"]) if "Load" in tl else 0  # ✅ FIX: take Load from TL row
     else:
         pool_name, tab, pool_up, tl_name = "-", "-", "-", "-"
         total_count = 0
+        pool_up_time = None
 
+    # ✅ Staff rows
     active_rows = pool_df[(pool_df["Pool Up"].isna()) & (pool_df["Load"] > 0)].copy()
     total_load = tl_row["Load"].max() if not tl_row.empty else 0
     num_staff = len(active_rows)
     target_load = total_load / num_staff if num_staff else 1
 
-    # ✅ Expected Completion Time
-    expected_time = pool_up_time + timedelta(hours=1, minutes=5) if not pd.isna(pool_up_time) else None
+    expected_time = pool_up_time + timedelta(hours=1, minutes=5) if pool_up_time else None
 
     visual_rows = []
     for _, row in active_rows.iterrows():
@@ -68,16 +69,15 @@ def generate_status_block(pool_df):
         load_percent = min(100, int((load / target_load) * 100)) if target_load else 0
         load_display = f"{int(load)}"
 
-        # ✅ Time taken in minutes
+        # ✅ Duration in hh:mm:ss
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]):
             time_taken = row["End Time"] - row["Start Time"]
-            minutes_taken = int(time_taken.total_seconds() / 60)
-            duration_str = f"{minutes_taken} min"
+            duration_str = str(time_taken).split(".")[0]  # format hh:mm:ss
         else:
             time_taken = None
             duration_str = "-"
 
-        # 🔴 Flag if staff finished after expected time
+        # 🔴 Flag if time exceeded expected
         overdue = False
         if expected_time and pd.notna(row["End Time"]):
             overdue = row["End Time"] > expected_time
@@ -95,7 +95,7 @@ def generate_status_block(pool_df):
             ], className=box_class)
         )
 
-    # 🔽 Header area
+    # ✅ Header layout (CENTERED + Info below)
     return dbc.Card([
         dbc.CardHeader([
             html.Div([
@@ -104,16 +104,17 @@ def generate_status_block(pool_df):
                 html.Div(f"⬆ Pool Up: {pool_up}", className="pool-time"),
                 html.Div("🟢 Complete    🔶 In Progress", className="pool-status"),
                 html.Div([
-                    html.Div(f"Total Count: {total_count}"),
-                    html.Div(f"Individual Count: {num_staff}"),
-                    html.Div(f"Expected Completion: {expected_time.strftime('%H:%M:%S') if expected_time else '-'}")
-                ], className="pool-info-box")
-            ], className="pool-header")
+                    html.Span(f"Total Count: {total_count}", style={"marginRight": "12px"}),
+                    html.Span(f"Individual Count: {num_staff}", style={"marginRight": "12px"}),
+                    html.Span(f"Expected Completion: {expected_time.strftime('%H:%M:%S') if expected_time else '-'}")
+                ], style={"font-size": "0.8rem", "color": "#ccc", "marginTop": "6px"})
+            ], className="pool-header", style={"text-align": "center"})
         ]),
         dbc.CardBody(
             html.Div(visual_rows, className="seat-grid", style={"padding": "10px"})
         )
     ], className="mb-4", style={"backgroundColor": "#0d1b2a", "borderRadius": "15px"})
+
 
 
 # --- App Init ---
