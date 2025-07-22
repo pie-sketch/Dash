@@ -15,7 +15,7 @@ def load_data():
     df["End Time"] = pd.to_datetime(df["End Time"], errors="coerce", dayfirst=True)
     df["Pool Up"] = pd.to_datetime(df["Pool Up"], errors="coerce", dayfirst=True)
     df["Load"] = pd.to_numeric(df["Load"], errors="coerce").fillna(0)
-    df["Duration"] = (df["End Time"] - df["Start Time"]).dt.total_seconds()
+    df["Duration"] = (df["End Time"] - df["Start Time"]).dt.total_seconds() / 60
     df["Pool ID"] = df["Pool Name"] + " - " + df["Tab"]
     return df
 
@@ -45,10 +45,9 @@ def generate_status_block(pool_df):
         pool_up_time = tl["Pool Up"]
         pool_up = pool_up_time.strftime("%d/%m/%Y %H:%M:%S")
         tl_name = tl["Name"]
-        total_count = int(tl["Count"]) if "Count" in pool_df.columns and pd.notna(tl["Count"]) else 0
+        total_count = int(tl["Count"]) if "Count" in tl else 0
     else:
         pool_name, tab, pool_up, tl_name = "-", "-", "-", "-"
-        pool_up_time = pd.NaT
         total_count = 0
 
     active_rows = pool_df[(pool_df["Pool Up"].isna()) & (pool_df["Load"] > 0)].copy()
@@ -68,10 +67,7 @@ def generate_status_block(pool_df):
         load_display = f"{int(load)}"
 
         completion_time = row["End Time"] - row["Start Time"]
-        if pd.notna(completion_time):
-            completion_time_str = str(timedelta(seconds=int(completion_time.total_seconds())))
-        else:
-            completion_time_str = "-"
+        completion_time_str = str(timedelta(seconds=int(completion_time.total_seconds()))) if pd.notna(completion_time) else "-"
 
         visual_rows.append(
             html.Div([
@@ -86,23 +82,18 @@ def generate_status_block(pool_df):
         dbc.CardHeader([
             html.Div([
                 html.Div([
-                    html.Div(f"Total Count: {total_count}", style={"font-size": "0.8rem", "color": "#aaa"}),
-                    html.Div(f"Individual Count: {num_staff}", style={"font-size": "0.8rem", "color": "#aaa"}),
-                    html.Div(f"Expected Completion: {expected_time.strftime('%H:%M:%S') if expected_time != '-' else '-'}", style={"font-size": "0.8rem", "color": "#aaa"})
-                ], style={"flex": "1", "textAlign": "left"}),
+                    html.Div([f"Total Count: {total_count}"], style={"font-size": "0.8rem", "color": "#aaa"}),
+                    html.Div([f"Individual Count: {num_staff}"], style={"font-size": "0.8rem", "color": "#aaa"}),
+                    html.Div([f"Expected Completion: {expected_time.strftime('%H:%M:%S') if expected_time != '-' else '-'}"], style={"font-size": "0.8rem", "color": "#aaa"})
+                ], style={"text-align": "left", "position": "absolute"}),
 
-                html.Div([
-                    html.Div(f"{tl_name}", className="pool-title"),
-                    html.Div(f"{pool_name} - {tab}", className="pool-title"),
-                    html.Div(f"⬆ Pool Up: {pool_up}", className="pool-time"),
-                    html.Div("🟢 Complete    🟠 In Progress", className="pool-status")
-                ], style={"flex": "2", "textAlign": "center"})
-            ], className="pool-header", style={"display": "flex", "justifyContent": "space-between", "alignItems": "center"})
+                html.Div(f"{tl_name}", className="pool-title"),
+                html.Div(f"{pool_name} - {tab}", className="pool-title"),
+                html.Div(f"⬆ Pool Up: {pool_up}", className="pool-time"),
+                html.Div("🟢 Complete    🟠 In Progress", className="pool-status")
+            ], className="pool-header")
         ]),
         dbc.CardBody(
-            html.Div(
-                visual_rows,
-                style={"display": "flex", "flexWrap": "wrap", "justifyContent": "center", "gap": "12px", "padding": "10px"}
-            )
+            html.Div(visual_rows, className="seat-grid")
         )
     ], className="mb-4", style={"backgroundColor": "#0d1b2a", "borderRadius": "15px"})
