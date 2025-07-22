@@ -5,6 +5,7 @@
     transform: scale(1.05);
 }
 
+/* Core Card Content */
 .card-content {
     background-color: #1a2639;
     padding: 10px;
@@ -15,14 +16,14 @@
     transition: transform 0.3s ease;
 }
 
-/* Animate orange progress */
+/* Animated Progress - Orange */
 .animated-progress {
     background: repeating-linear-gradient(45deg, #ffa500 0, #ffa500 10px, #ffcc80 10px, #ffcc80 20px);
     background-size: 200% 200%;
     animation: moveStripes 2s linear infinite;
 }
 
-/* Animate red for late */
+/* Animated Late - Red */
 .animated-late {
     background: repeating-linear-gradient(45deg, #ff4444 0, #ff4444 10px, #ff9999 10px, #ff9999 20px);
     background-size: 200% 200%;
@@ -47,10 +48,16 @@
     100% { text-shadow: 0 0 2px #33ccff; }
 }
 
-/* Pool headers */
+/* Pool Headers */
 .pool-header {
     text-align: center;
     margin-bottom: 10px;
+}
+
+/* Unified header style */
+.pool-header > div {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #ccc;
 }
 
 .tl-name {
@@ -83,21 +90,13 @@
 .pool-status .in-progress { color: orange; }
 .pool-status .late { color: red; }
 
-/* Overdue box */
+/* Overdue Box */
 .overdue-box {
     background-color: #3b0d0d !important;
     border: 1px solid red;
 }
 
-/* Responsive font */
-@media (max-width: 480px) {
-    .tl-name { font-size: 1rem; }
-    .pool-title { font-size: 0.85rem; }
-    .pool-time, .pool-status, .pool-info-box div { font-size: 0.7rem; }
-    .card-content { width: 80px; padding: 8px; }
-}
-
-/* Seat grid */
+/* Seat Grid */
 .seat-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
@@ -105,6 +104,66 @@
     justify-items: center;
 }
 
+/* POOL PROGRESS SECTION */
+
+/* Scrollable row */
+.pool-progress-row {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 10px;
+    padding-bottom: 6px;
+    justify-content: flex-start;
+    direction: ltr;   /* ✅ ensure full-width left-to-right */
+    width: 100%;
+}
+
+/* Custom scrollbar */
+.pool-progress-row::-webkit-scrollbar {
+    height: 5px;
+}
+.pool-progress-row::-webkit-scrollbar-thumb {
+    background-color: #666;
+    border-radius: 3px;
+}
+
+/* Progress section wrapper */
+.pool-progress-container {
+    margin-bottom: 12px;
+}
+
+.pool-progress-container .title {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #ccc;
+    margin-bottom: 6px;
+}
+
+/* Mini pool box */
+.mini-pool-box {
+    background-color: #1a1a1a;
+    border-radius: 8px;
+    padding: 6px 12px;
+    text-align: center;
+    min-width: 120px;
+    max-width: 120px;
+    transition: all 0.3s ease-in-out;
+}
+
+.mini-pool-box:hover {
+    box-shadow: 0 0 10px #33ccff;
+    transform: scale(1.03);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .tl-name { font-size: 1rem; }
+    .pool-title { font-size: 0.85rem; }
+    .pool-time, .pool-status, .pool-info-box div { font-size: 0.7rem; }
+    .card-content { width: 80px; padding: 8px; }
+}
+
+/* Status glow animations */
 @keyframes glow-complete {
     0% { text-shadow: 0 0 2px #00ff88; }
     50% { text-shadow: 0 0 10px #00ff88; }
@@ -136,42 +195,4 @@
 .pool-status .late {
     color: red;
     animation: glow-late 1.5s infinite ease-in-out;
-}
-
-/* POOL PROGRESS SECTION — NEW */
-
-/* 1. Scrollable container */
-.pool-progress-row {
-    display: flex;
-    overflow-x: auto;
-    gap: 10px;
-    padding-bottom: 6px;
-}
-
-/* 2. Custom scrollbar (optional) */
-.pool-progress-row::-webkit-scrollbar {
-    height: 5px;
-}
-.pool-progress-row::-webkit-scrollbar-thumb {
-    background-color: #666;
-    border-radius: 3px;
-}
-
-/* 3. Header container */
-.pool-progress-container {
-    margin-bottom: 12px;
-}
-
-.pool-progress-container .title {
-    font-size: 0.9rem;
-    font-weight: bold;
-    color: #ccc;
-    margin-bottom: 6px;
-}
-
-/* 4. Mini box hover effect */
-.mini-pool-box:hover {
-    box-shadow: 0 0 10px #33ccff;
-    transform: scale(1.03);
-    transition: all 0.3s ease-in-out;
 }
