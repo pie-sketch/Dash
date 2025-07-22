@@ -6,10 +6,10 @@ import pandas as pd
 from datetime import datetime, timedelta
 import os
 
-# --- Google Sheet CSV ---
+# === Google Sheet CSV ===
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1LltJKL6wsXQt_6Qv3rwjfL9StACcMHsNQ2C_wTKw_iw/export?format=csv&gid=0"
 
-# --- Load Data ---
+# === Load Data ===
 def load_data():
     df = pd.read_csv(SHEET_URL)
     df["Start Time"] = pd.to_datetime(df["Start Time"], errors="coerce", dayfirst=True)
@@ -19,7 +19,7 @@ def load_data():
     df["Pool ID"] = df["Pool Name"] + " - " + df["Tab"]
     return df
 
-# --- Get Status ---
+# === Status Logic ===
 def get_status(row, pool_df):
     if not pd.isna(row["Pool Up"]):
         return "TL", "secondary"
@@ -36,6 +36,7 @@ def get_status(row, pool_df):
         return "Complete", "success"
     return "In Progress", "warning"
 
+# === Main Card Generator ===
 def generate_status_block(pool_df):
     tl_row = pool_df[pool_df["Pool Up"].notna()]
     if not tl_row.empty:
@@ -67,7 +68,7 @@ def generate_status_block(pool_df):
         load_percent = min(100, int((load / target_load) * 100)) if target_load else 0
         load_display = f"{int(load)}"
 
-        # ✅ Duration in hh:mm:ss (wrap after 24h, no '0 days')
+        # Format Duration
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]):
             time_taken = row["End Time"] - row["Start Time"]
             total_seconds = int(time_taken.total_seconds())
@@ -75,14 +76,12 @@ def generate_status_block(pool_df):
             minutes, seconds = divmod(remainder, 60)
             duration_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
         else:
-            time_taken = None
             duration_str = "-"
 
-        # 🔴 Late only if actual duration > expected
+        # Late Check
         overdue = False
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]):
-            actual_duration = row["End Time"] - row["Start Time"]
-            overdue = actual_duration > expected_duration
+            overdue = (row["End Time"] - row["Start Time"]) > expected_duration
 
         box_class = "card-content glow-card"
         progress_wrapper_class = ""
@@ -96,7 +95,8 @@ def generate_status_block(pool_df):
             html.Div([
                 html.Div(name, style={"font-weight": "bold", "font-size": "0.8rem", "text-align": "center"}),
                 html.Div(
-                    dbc.Progress(value=load_percent, color=color, striped=(status == "In Progress"), style={"height": "16px", "width": "100%"}),
+                    dbc.Progress(value=load_percent, color=color, striped=(status == "In Progress"),
+                                 style={"height": "16px", "width": "100%"}),
                     className=progress_wrapper_class
                 ),
                 html.Div(load_display, style={"font-size": "0.75rem", "text-align": "center", "marginTop": "4px"}),
@@ -105,38 +105,37 @@ def generate_status_block(pool_df):
         )
 
     return dbc.Card([
-    dbc.CardHeader([
-    html.Div([
-        html.Div(f"{tl_name}", className="tl-name"),
-        html.Div(f"{pool_name} - {tab}", className="pool-title"),
-        html.Div(f"⬆ Pool Up: {pool_up}", className="pool-time"),
-        html.Div([
-            html.Span("🟢 Complete", className="complete"),
-            html.Span("  🔶 In Progress", className="in-progress"),
-            html.Span("  🔴 Late", className="late")
-        ], className="pool-status"),
-        html.Div([
-            html.Span(f"Total Count: {total_count}", style={"marginRight": "12px"}),
-            html.Span(f"Individual Count: {num_staff}", style={"marginRight": "12px"}),
-            html.Span(f"Expected Completion: {expected_time.strftime('%H:%M:%S') if expected_time else '-'}")
-        ], style={"font-size": "0.8rem", "color": "#ccc", "marginTop": "6px"})
-    ], className="pool-header", style={"text-align": "center"})
-]),
-
+        dbc.CardHeader([
+            html.Div([
+                html.Div(tl_name, className="tl-name"),
+                html.Div(f"{pool_name} - {tab}", className="pool-title"),
+                html.Div(f"⬆ Pool Up: {pool_up}", className="pool-time"),
+                html.Div([
+                    html.Span("🟢 Complete", className="complete"),
+                    html.Span("  🔶 In Progress", className="in-progress"),
+                    html.Span("  🔴 Late", className="late")
+                ], className="pool-status"),
+                html.Div([
+                    html.Span(f"Total Count: {total_count}", style={"marginRight": "12px"}),
+                    html.Span(f"Individual Count: {num_staff}", style={"marginRight": "12px"}),
+                    html.Span(f"Expected Completion: {expected_time.strftime('%H:%M:%S') if expected_time else '-'}")
+                ], style={"font-size": "0.8rem", "color": "#ccc", "marginTop": "6px"})
+            ], className="pool-header", style={"text-align": "center"})
+        ]),
         dbc.CardBody(html.Div(visual_rows, className="seat-grid", style={"padding": "10px"}))
     ], className="mb-4", style={"backgroundColor": "#0d1b2a", "borderRadius": "15px"})
 
-
-
-# --- App Init ---
+# === App Init ===
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
 app.title = "Live Pool Dashboard"
 
-# --- Layout ---
+# === Layout ===
 app.layout = dbc.Container([
     dbc.Row([
-        dbc.Col(html.Div(id="last-update", className="text-start text-secondary", style={"font-size": "0.75rem"}), width=6),
-        dbc.Col(html.Div(id="countdown-timer", className="text-end countdown-glow", style={"font-size": "0.75rem"}), width=6)
+        dbc.Col(html.Div(id="last-update", className="text-start text-secondary",
+                         style={"font-size": "0.75rem"}), width=6),
+        dbc.Col(html.Div(id="countdown-timer", className="text-end countdown-glow",
+                         style={"font-size": "0.75rem"}), width=6)
     ], align="center"),
 
     dcc.Interval(id="auto-refresh", interval=15000, n_intervals=0),
@@ -144,13 +143,15 @@ app.layout = dbc.Container([
 
     html.Div(id="current-pool"),
     html.Hr(className="bg-light"),
-    dbc.Button("Show Previous Pools", id="toggle-collapse", color="info", className="mb-2", style={"width": "100%"}),
+    dbc.Button("Show Previous Pools", id="toggle-collapse", color="info",
+               className="mb-2", style={"width": "100%"}),
     dbc.Collapse(id="previous-pools", is_open=False)
 ], fluid=True, style={"background-color": "#0d1b2a", "padding": "1rem"})
 
+# === Globals ===
 last_updated_timestamp = datetime.now()
 
-# --- Callbacks ---
+# === Callbacks ===
 @app.callback(
     Output("current-pool", "children"),
     Output("previous-pools", "children"),
@@ -185,6 +186,7 @@ def update_countdown(n):
 def toggle_previous(n, is_open):
     return not is_open
 
+# === Run Server ===
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
