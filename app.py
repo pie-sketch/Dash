@@ -55,7 +55,7 @@ def generate_status_block(pool_df):
     total_load = tl_row["Load"].max() if not tl_row.empty else 0
     manpower = len(active_rows)
     target_load = total_load / manpower if manpower else 1
-    expected_time = pool_up_time + timedelta(hours=1, minutes=5) if pool_up_time else None
+    expected_time = pool_up_time + timedelta(hours=1) if pool_up_time else None
 
     visual_rows = []
     for _, row in active_rows.iterrows():
@@ -118,7 +118,7 @@ def generate_status_block(pool_df):
                 html.Div([
                     html.Span(f"Total Count: {total_count}", style={"marginRight": "12px"}),
                     html.Span(f"Manpower: {manpower}", style={"marginRight": "12px"}),
-                    html.Span(f"Expected Completion: {expected_time.strftime('%H:%M:%S') if expected_time else '-'}")
+                    html.Span(f"Expected Pool Done: {expected_time.strftime('%H:%M:%S') if expected_time else '-'}")
                 ], style={"font-size": "0.8rem", "color": "#ccc", "marginTop": "6px"})
             ], className="pool-header", style={"text-align": "center"})
         ]),
