@@ -115,3 +115,10 @@
         padding: 8px;
     }
 }
+
+/* 🔴 Overdue card box */
+.overdue-box {
+    background-color: #3b0d0d !important;
+    border: 1px solid red;
+}
+
