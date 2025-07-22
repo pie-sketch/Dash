@@ -83,20 +83,28 @@ def generate_pool_progress_row(df, recent_pool_ids):
         })
         rows.append(block)
 
-        return html.Div([
-            html.Div("POOL PROGRESS", style={"color": "#ccc", "fontWeight": "bold", "marginBottom": "4px", "fontSize": "0.85rem"}),
+         return html.Div([
+            html.Div("POOL PROGRESS", style={
+                "color": "#ccc", 
+                "fontWeight": "bold", 
+                "marginBottom": "4px", 
+                "fontSize": "0.85rem"
+            }),
             html.Div(
-                list(reversed(rows)),  # ← reverse order: latest on right
+                list(reversed(rows)),  # Latest on right, oldest on left
                 style={
                     "display": "flex",
-                    "justifyContent": "space-between",  # spread evenly on wide screens
-                    "flexWrap": "nowrap",               # prevent wrapping
+                    "flexWrap": "nowrap",
                     "overflowX": "auto",
-                    "gap": "12px",                      # spacing between cards
-                    "direction": "rtl"                  # ← makes latest start from right
+                    "gap": "12px",
+                    "justifyContent": "flex-start",
+                    "direction": "rtl",          # 👈 ensures latest shows at right
+                    "width": "100%",
+                    "paddingBottom": "6px"
                 }
             )
         ], style={"marginBottom": "12px"})
+
 
 
 # --- Status Block ---
