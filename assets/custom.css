@@ -54,18 +54,26 @@
     color: #999;
 }
 
+/* 🆕 Status Colors & Symbols */
 .pool-status {
     font-size: 0.95rem;
     color: lightgray;
     margin-top: 4px;
+    white-space: nowrap;
 }
 
-/* 🆕 Header Info (Counts) with Animation */
+.pool-status span {
+    margin-right: 10px;
+}
+
+.pool-status .complete { color: #00ff88; }
+.pool-status .in-progress { color: orange; }
+.pool-status .late { color: red; }
+
+/* 🆕 Counts Box under TL Header */
 .pool-info-box {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    text-align: right;
+    margin-top: 5px;
+    text-align: center;
     animation: fadeSlideIn 0.8s ease-in-out;
 }
 
@@ -94,6 +102,12 @@
     justify-items: center;
 }
 
+/* 🔴 Overdue card box */
+.overdue-box {
+    background-color: #3b0d0d !important;
+    border: 1px solid red;
+}
+
 /* 📱 Responsive Scaling */
 @media (max-width: 480px) {
     .tl-name {
@@ -115,16 +129,3 @@
         padding: 8px;
     }
 }
-
-/* 🔴 Overdue card box */
-.overdue-box {
-    background-color: #3b0d0d !important;
-    border: 1px solid red;
-}
-
-/* Red highlight for overdue staff */
-.overdue-box {
-    background-color: #3b0d0d !important;
-    border: 1px solid red;
-}
-
