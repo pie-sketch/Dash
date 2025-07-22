@@ -83,13 +83,20 @@ def generate_pool_progress_row(df, recent_pool_ids):
         })
         rows.append(block)
 
-    return html.Div([
-        html.Div("POOL PROGRESS", style={"color": "#ccc", "fontWeight": "bold", "marginBottom": "4px", "fontSize": "0.85rem"}),
-        html.Div(rows, style={"display": "flex", "overflowX": "auto"})
-    ], style={"marginBottom": "12px"})
-
-# Additional functions unchanged (generate_status_block, etc.) should be included below...
-# You can now integrate this into your main app as needed.
+        return html.Div([
+            html.Div("POOL PROGRESS", style={"color": "#ccc", "fontWeight": "bold", "marginBottom": "4px", "fontSize": "0.85rem"}),
+            html.Div(
+                list(reversed(rows)),  # ← reverse order: latest on right
+                style={
+                    "display": "flex",
+                    "justifyContent": "space-between",  # spread evenly on wide screens
+                    "flexWrap": "nowrap",               # prevent wrapping
+                    "overflowX": "auto",
+                    "gap": "12px",                      # spacing between cards
+                    "direction": "rtl"                  # ← makes latest start from right
+                }
+            )
+        ], style={"marginBottom": "12px"})
 
 
 # --- Status Block ---
