@@ -35,7 +35,6 @@ def get_status(row, pool_df):
         return "Complete", "success"
     return "In Progress", "warning"
 
-# --- Pool Progress ---
 def generate_pool_progress_row(df, recent_pool_ids):
     rows = []
     for pid in recent_pool_ids:
@@ -51,33 +50,45 @@ def generate_pool_progress_row(df, recent_pool_ids):
 
         active_rows = pool_df[(pool_df["Pool Up"].isna()) & (pool_df["Load"] > 0)]
         if active_rows.empty:
-            status = "Not Started"
+            status = "🟡 Not Started"
             color = "#cccc00"  # Yellow
         elif all(get_status(row, pool_df)[0] == "Complete" for _, row in active_rows.iterrows()):
-            status = "Completed"
+            status = "🟢 Completed"
             color = "#00cc66"  # Green
         else:
-            status = "In Progress"
+            status = "🟠 In Progress"
             color = "#ffaa00"  # Orange
 
         block = html.Div([
-            html.Div(f"{pool_name} - {tab}", style={"fontWeight": "bold", "fontSize": "0.75rem"}),
+            html.Div(f"{pool_name} - {tab}", style={
+                "fontWeight": "bold",
+                "fontSize": "0.75rem",
+                "whiteSpace": "nowrap"
+            }),
             html.Div(f"{pool_time}", style={"fontSize": "0.7rem", "color": "#999"}),
-            html.Div(status, style={"color": color, "fontSize": "0.8rem", "fontWeight": "bold"})
+            html.Div(status, style={
+                "color": color,
+                "fontSize": "0.8rem",
+                "fontWeight": "bold"
+            })
         ], className="mini-pool-box", style={
             "backgroundColor": "#1a1a1a",
             "borderRadius": "8px",
             "padding": "6px 12px",
-            "marginRight": "6px",
             "textAlign": "center",
-            "minWidth": "120px"
+            "minWidth": "120px",
+            "display": "flex",
+            "flexDirection": "column",
+            "alignItems": "center",
+            "justifyContent": "center"
         })
         rows.append(block)
 
     return html.Div([
-        html.Div("POOL PROGRESS", style={"color": "#ccc", "fontWeight": "bold", "marginBottom": "4px", "fontSize": "0.85rem"}),
-        html.Div(rows, style={"display": "flex", "overflowX": "auto"})
-    ], style={"marginBottom": "12px"})
+        html.Div("POOL PROGRESS", className="title"),
+        html.Div(rows, className="pool-progress-row")
+    ], className="pool-progress-container")
+
 
 # --- Visual Block ---
 def generate_status_block(pool_df):
