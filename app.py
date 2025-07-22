@@ -77,11 +77,11 @@ def generate_status_block(pool_df):
             time_taken = None
             duration_str = "-"
 
-        # Late logic: Load-based threshold (Load / 150 * 60 minutes)
+        # Late logic based on scaled expectation
         overdue = False
-        if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]) and load:
+        if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]) and total_load:
             actual_duration = row["End Time"] - row["Start Time"]
-            expected_minutes = (load / 150) * 60
+            expected_minutes = (manpower / total_load) * 150 * 60
             overdue = actual_duration.total_seconds() > (expected_minutes * 60)
 
         box_class = "card-content glow-card"
