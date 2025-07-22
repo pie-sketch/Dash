@@ -83,27 +83,33 @@ def generate_pool_progress_row(df, recent_pool_ids):
         })
         rows.append(block)
 
-         return html.Div([
-            html.Div("POOL PROGRESS", style={
-                "color": "#ccc", 
-                "fontWeight": "bold", 
-                "marginBottom": "4px", 
-                "fontSize": "0.85rem"
-            }),
-            html.Div(
-                list(reversed(rows)),  # Latest on right, oldest on left
-                style={
-                    "display": "flex",
-                    "flexWrap": "nowrap",
-                    "overflowX": "auto",
-                    "gap": "12px",
-                    "justifyContent": "flex-start",
-                    "direction": "rtl",          # 👈 ensures latest shows at right
-                    "width": "100%",
-                    "paddingBottom": "6px"
-                }
-            )
-        ], style={"marginBottom": "12px"})
+def generate_pool_progress_row(df, recent_pool_ids):
+rows = []
+for pid in recent_pool_ids:
+    # your logic...
+
+return html.Div([
+    html.Div("POOL PROGRESS", style={
+        "color": "#ccc", 
+        "fontWeight": "bold", 
+        "marginBottom": "4px", 
+        "fontSize": "0.85rem"
+    }),
+    html.Div(
+        list(reversed(rows)),
+        style={
+            "display": "flex",
+            "flexWrap": "nowrap",
+            "overflowX": "auto",
+            "gap": "12px",
+            "justifyContent": "flex-start",
+            "direction": "rtl",
+            "width": "100%",
+            "paddingBottom": "6px"
+        }
+    )
+], style={"marginBottom": "12px"})
+
 
 
 
