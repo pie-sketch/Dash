@@ -67,14 +67,16 @@ def generate_status_block(pool_df):
         load_percent = min(100, int((load / target_load) * 100)) if target_load else 0
         load_display = f"{int(load)}"
 
-        # Duration format (hh:mm:ss)
+        # ✅ Duration in total hh:mm:ss (even if > 24h)
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]):
             time_taken = row["End Time"] - row["Start Time"]
-            duration_str = str(timedelta(seconds=int(time_taken.total_seconds())))
+            total_seconds = int(time_taken.total_seconds())
+            hours, remainder = divmod(total_seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            duration_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
         else:
             time_taken = None
             duration_str = "-"
-        
 
         overdue = False
         if expected_time and pd.notna(row["End Time"]):
