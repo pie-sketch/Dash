@@ -3,6 +3,7 @@ import dash_bootstrap_components as dbc
 from dash import html, dcc, Input, Output, State
 import pandas as pd
 from datetime import datetime, timedelta
+import re
 import os
 
 # --- Google Sheet CSV ---
@@ -10,6 +11,9 @@ SHEET_URL = "https://docs.google.com/spreadsheets/d/1LltJKL6wsXQt_6Qv3rwjfL9StAC
 POOL_MAP_URL = "https://docs.google.com/spreadsheets/d/1LltJKL6wsXQt_6Qv3rwjfL9StACcMHsNQ2C_wTKw_iw/export?format=csv&gid=973487960"
 
 # --- Load Data ---
+def strip_date(pool_name):
+    return re.sub(r"_\d{8}", "", str(pool_name))
+
 def load_data():
     df = pd.read_csv(SHEET_URL)
     df["Start Time"] = pd.to_datetime(df["Start Time"], errors="coerce", dayfirst=True)
@@ -18,12 +22,14 @@ def load_data():
     df["Load"] = pd.to_numeric(df["Load"], errors="coerce").fillna(0)
     df["Pool ID"] = df["Pool Name"] + " - " + df["Tab"]
 
-    # Merge short pool names
     pool_map = pd.read_csv(POOL_MAP_URL)
-    df = df.merge(pool_map[["Pool Name", "Tab", "Pools"]], how="left", on=["Pool Name", "Tab"])
+    pool_map["CleanName"] = pool_map["Pool Name"].apply(strip_date)
+    pool_map_dict = dict(zip(pool_map["CleanName"] + " - " + pool_map["Tab"], pool_map["Pools"]))
+
+    df["Clean ID"] = df["Pool Name"].apply(strip_date) + " - " + df["Tab"]
+    df["Pools"] = df["Clean ID"].map(pool_map_dict)
     return df
 
-# --- Get Status ---
 def get_status(row, pool_df):
     if not pd.isna(row["Pool Up"]):
         return "TL", "secondary"
@@ -40,7 +46,6 @@ def get_status(row, pool_df):
         return "Complete", "success"
     return "In Progress", "warning"
 
-# --- Pool Progress Section ---
 def generate_pool_progress_row(df, recent_pool_ids):
     rows = []
     for pid in recent_pool_ids:
@@ -82,6 +87,10 @@ def generate_pool_progress_row(df, recent_pool_ids):
         html.Div("POOL PROGRESS", style={"color": "#ccc", "fontWeight": "bold", "marginBottom": "4px", "fontSize": "0.85rem"}),
         html.Div(rows, style={"display": "flex", "overflowX": "auto"})
     ], style={"marginBottom": "12px"})
+
+# Additional functions unchanged (generate_status_block, etc.) should be included below...
+# You can now integrate this into your main app as needed.
+
 
 # --- Status Block ---
 def generate_status_block(pool_df):
