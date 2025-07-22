@@ -18,7 +18,7 @@ def load_data():
     df["Pool ID"] = df["Pool Name"] + " - " + df["Tab"]
     return df
 
-# --- Get Status ---
+# --- Status ---
 def get_status(row, pool_df):
     if not pd.isna(row["Pool Up"]):
         return "TL", "secondary"
@@ -35,7 +35,51 @@ def get_status(row, pool_df):
         return "Complete", "success"
     return "In Progress", "warning"
 
-# --- Main Visual Block ---
+# --- Pool Progress ---
+def generate_pool_progress_row(df, recent_pool_ids):
+    rows = []
+    for pid in recent_pool_ids:
+        pool_df = df[df["Pool ID"] == pid]
+        tl_row = pool_df[pool_df["Pool Up"].notna()]
+        if tl_row.empty:
+            continue
+
+        tl = tl_row.iloc[0]
+        pool_name = tl["Pool Name"]
+        tab = tl["Tab"]
+        pool_time = tl["Pool Up"].strftime("%H:%M")
+
+        active_rows = pool_df[(pool_df["Pool Up"].isna()) & (pool_df["Load"] > 0)]
+        if active_rows.empty:
+            status = "Not Started"
+            color = "#cccc00"  # Yellow
+        elif all(get_status(row, pool_df)[0] == "Complete" for _, row in active_rows.iterrows()):
+            status = "Completed"
+            color = "#00cc66"  # Green
+        else:
+            status = "In Progress"
+            color = "#ffaa00"  # Orange
+
+        block = html.Div([
+            html.Div(f"{pool_name} - {tab}", style={"fontWeight": "bold", "fontSize": "0.75rem"}),
+            html.Div(f"{pool_time}", style={"fontSize": "0.7rem", "color": "#999"}),
+            html.Div(status, style={"color": color, "fontSize": "0.8rem", "fontWeight": "bold"})
+        ], className="mini-pool-box", style={
+            "backgroundColor": "#1a1a1a",
+            "borderRadius": "8px",
+            "padding": "6px 12px",
+            "marginRight": "6px",
+            "textAlign": "center",
+            "minWidth": "120px"
+        })
+        rows.append(block)
+
+    return html.Div([
+        html.Div("POOL PROGRESS", style={"color": "#ccc", "fontWeight": "bold", "marginBottom": "4px", "fontSize": "0.85rem"}),
+        html.Div(rows, style={"display": "flex", "overflowX": "auto"})
+    ], style={"marginBottom": "12px"})
+
+# --- Visual Block ---
 def generate_status_block(pool_df):
     tl_row = pool_df[pool_df["Pool Up"].notna()]
     if not tl_row.empty:
@@ -66,7 +110,6 @@ def generate_status_block(pool_df):
         load_percent = min(100, int((load / target_load) * 100)) if target_load else 0
         load_display = f"{int(load)}"
 
-        # Duration in hh:mm:ss
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]):
             time_taken = row["End Time"] - row["Start Time"]
             total_seconds = int(time_taken.total_seconds())
@@ -74,15 +117,14 @@ def generate_status_block(pool_df):
             minutes, seconds = divmod(remainder, 60)
             duration_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
         else:
-            time_taken = None
             duration_str = "-"
 
-        # Late logic based on scaled expectation
+        # ✅ Late Logic: Load / 150 * 60 mins
         overdue = False
-        if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]) and total_load:
+        if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]) and load > 0:
             actual_duration = row["End Time"] - row["Start Time"]
-            expected_minutes = (manpower / total_load) * 150 * 60
-            overdue = actual_duration.total_seconds() > (expected_minutes * 60)
+            expected_duration = timedelta(minutes=(load / 150) * 60)
+            overdue = actual_duration > expected_duration
 
         box_class = "card-content glow-card"
         progress_wrapper_class = ""
@@ -96,7 +138,8 @@ def generate_status_block(pool_df):
             html.Div([
                 html.Div(name, style={"font-weight": "bold", "font-size": "0.8rem", "text-align": "center"}),
                 html.Div(
-                    dbc.Progress(value=load_percent, color=color, striped=(status == "In Progress"), style={"height": "16px", "width": "100%"}),
+                    dbc.Progress(value=load_percent, color=color, striped=(status == "In Progress"),
+                                 style={"height": "16px", "width": "100%"}),
                     className=progress_wrapper_class
                 ),
                 html.Div(load_display, style={"font-size": "0.75rem", "text-align": "center", "marginTop": "4px"}),
@@ -147,7 +190,7 @@ app.layout = dbc.Container([
     dbc.Collapse(id="previous-pools", is_open=False)
 ], fluid=True, style={"background-color": "#0d1b2a", "padding": "1rem"})
 
-# --- Timestamp Tracker ---
+# --- Tracker ---
 last_updated_timestamp = datetime.now()
 
 # --- Callbacks ---
@@ -166,10 +209,11 @@ def update_dashboard(n):
     pool_groups = pool_groups.sort_values("Pool Up", ascending=False).head(9)
     pool_ids = pool_groups["Pool ID"].tolist()
 
+    progress_row = generate_pool_progress_row(df, pool_ids)
     pool_blocks = [generate_status_block(df[df["Pool ID"] == pid]) for pid in pool_ids]
-    updated_time = last_updated_timestamp.strftime("Last updated: %d/%m/%Y %H:%M:%S")
 
-    return pool_blocks[0], pool_blocks[1:], updated_time
+    updated_time = last_updated_timestamp.strftime("Last updated: %d/%m/%Y %H:%M:%S")
+    return [progress_row, pool_blocks[0]], pool_blocks[1:], updated_time
 
 @app.callback(
     Output("countdown-timer", "children"),
