@@ -104,3 +104,36 @@
     gap: 10px;
     justify-items: center;
 }
+
+@keyframes glow-complete {
+  0% { text-shadow: 0 0 2px #00ff88; }
+  50% { text-shadow: 0 0 10px #00ff88; }
+  100% { text-shadow: 0 0 2px #00ff88; }
+}
+
+@keyframes glow-inprogress {
+  0% { text-shadow: 0 0 2px orange; }
+  50% { text-shadow: 0 0 10px orange; }
+  100% { text-shadow: 0 0 2px orange; }
+}
+
+@keyframes glow-late {
+  0% { text-shadow: 0 0 2px red; }
+  50% { text-shadow: 0 0 10px red; }
+  100% { text-shadow: 0 0 2px red; }
+}
+
+.pool-status .complete {
+  color: #00ff88;
+  animation: glow-complete 1.5s infinite ease-in-out;
+}
+
+.pool-status .in-progress {
+  color: orange;
+  animation: glow-inprogress 1.5s infinite ease-in-out;
+}
+
+.pool-status .late {
+  color: red;
+  animation: glow-late 1.5s infinite ease-in-out;
+}
