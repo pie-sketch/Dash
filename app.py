@@ -90,10 +90,98 @@ def generate_status_block(pool_df):
                 html.Div(f"{tl_name}", className="pool-title"),
                 html.Div(f"{pool_name} - {tab}", className="pool-title"),
                 html.Div(f"⬆ Pool Up: {pool_up}", className="pool-time"),
-                html.Div("🟢 Complete    🟠 In Progress", className="pool-status")
+                html.Div("🟢 Complete    🔶 In Progress", className="pool-status")
             ], className="pool-header")
         ]),
         dbc.CardBody(
-            html.Div(visual_rows, className="seat-grid")
+            html.Div(
+                visual_rows,
+                className="seat-grid",
+                style={"padding": "10px"}
+            )
         )
     ], className="mb-4", style={"backgroundColor": "#0d1b2a", "borderRadius": "15px"})
+
+# --- App Init ---
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
+app.title = "Live Pool Dashboard"
+
+# --- Layout ---
+app.layout = dbc.Container([
+    dbc.Row([
+        dbc.Col(html.H3("Live Pool", className="text-light"), xs=12, md=8),
+        dbc.Col([
+            html.Div(id="last-update", className="text-end text-secondary", style={"font-size": "0.85rem"}),
+            html.Div(id="countdown-timer", className="text-end countdown-glow", style={"font-size": "0.8rem"})
+        ], xs=12, md=4)
+    ], align="center", className="mb-3"),
+
+    dcc.Interval(id="auto-refresh", interval=15000, n_intervals=0),
+    dcc.Interval(id="countdown-interval", interval=1000, n_intervals=0),
+
+    html.H5("Current Pool", className="mt-4 text-light text-center"),
+    html.Div(id="current-pool"),
+
+    html.Hr(className="bg-light"),
+    dbc.Button("Show Previous Pools", id="toggle-collapse", color="info", className="mb-2", style={"width": "100%"}),
+    dbc.Collapse(id="previous-pools", is_open=False)
+
+], fluid=True, style={"background-color": "#0d1b2a", "padding": "1rem"})
+
+# --- State Store for Countdown ---
+last_updated_timestamp = datetime.now()
+
+# --- Callback: Refresh Display ---
+@app.callback(
+    Output("current-pool", "children"),
+    Output("previous-pools", "children"),
+    Output("last-update", "children"),
+    Input("auto-refresh", "n_intervals")
+)
+def update_dashboard(n):
+    global last_updated_timestamp
+    last_updated_timestamp = datetime.now()
+
+    df = load_data()
+    pool_groups = df[df["Pool Up"].notna()].groupby("Pool ID")["Pool Up"].max().reset_index()
+    pool_groups = pool_groups.sort_values("Pool Up", ascending=False).head(9)
+    pool_ids = pool_groups["Pool ID"].tolist()
+
+    pool_blocks = []
+    for pid in pool_ids:
+        sub_df = df[df["Pool ID"] == pid]
+        block = generate_status_block(sub_df)
+        pool_blocks.append(block)
+
+    current = pool_blocks[0] if pool_blocks else html.Div("No current pool found.")
+    previous = pool_blocks[1:] if len(pool_blocks) > 1 else []
+
+    updated_time = last_updated_timestamp.strftime("Last updated: %d/%m/%Y %H:%M:%S")
+    return current, previous, updated_time
+
+# --- Callback: Countdown Timer ---
+@app.callback(
+    Output("countdown-timer", "children"),
+    Input("countdown-interval", "n_intervals")
+)
+def update_countdown(n):
+    global last_updated_timestamp
+    elapsed = (datetime.now() - last_updated_timestamp).seconds
+    remaining = max(0, 15 - elapsed)
+    return f"⏳ Refreshing in: {remaining:02d}s"
+
+# --- Collapse Toggle ---
+@app.callback(
+    Output("previous-pools", "is_open"),
+    Input("toggle-collapse", "n_clicks"),
+    State("previous-pools", "is_open"),
+    prevent_initial_call=True
+)
+def toggle_previous(n, is_open):
+    return not is_open
+
+# --- Run App ---
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    print(f"✅ Starting Dash app on port {port}...")
+    app.run(host="0.0.0.0", port=port, debug=False)
