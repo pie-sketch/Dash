@@ -105,19 +105,24 @@ def generate_status_block(pool_df):
         )
 
     return dbc.Card([
-        dbc.CardHeader([
-            html.Div([
-                html.Div(f"{tl_name}", className="tl-name"),
-                html.Div(f"{pool_name} - {tab}", className="pool-title"),
-                html.Div(f"⬆ Pool Up: {pool_up}", className="pool-time"),
-                html.Div("🟢 Complete    🔶 In Progress    🔴 Late", className="pool-status"),
-                html.Div([
-                    html.Span(f"Total Count: {total_count}", style={"marginRight": "12px"}),
-                    html.Span(f"Individual Count: {num_staff}", style={"marginRight": "12px"}),
-                    html.Span(f"Expected Completion: {expected_time.strftime('%H:%M:%S') if expected_time else '-'}")
-                ], style={"font-size": "0.8rem", "color": "#ccc", "marginTop": "6px"})
-            ], className="pool-header", style={"text-align": "center"})
-        ]),
+    dbc.CardHeader([
+    html.Div([
+        html.Div(f"{tl_name}", className="tl-name"),
+        html.Div(f"{pool_name} - {tab}", className="pool-title"),
+        html.Div(f"⬆ Pool Up: {pool_up}", className="pool-time"),
+        html.Div([
+            html.Span("🟢 Complete", className="complete"),
+            html.Span("  🔶 In Progress", className="in-progress"),
+            html.Span("  🔴 Late", className="late")
+        ], className="pool-status"),
+        html.Div([
+            html.Span(f"Total Count: {total_count}", style={"marginRight": "12px"}),
+            html.Span(f"Individual Count: {num_staff}", style={"marginRight": "12px"}),
+            html.Span(f"Expected Completion: {expected_time.strftime('%H:%M:%S') if expected_time else '-'}")
+        ], style={"font-size": "0.8rem", "color": "#ccc", "marginTop": "6px"})
+    ], className="pool-header", style={"text-align": "center"})
+]),
+
         dbc.CardBody(html.Div(visual_rows, className="seat-grid", style={"padding": "10px"}))
     ], className="mb-4", style={"backgroundColor": "#0d1b2a", "borderRadius": "15px"})
 
