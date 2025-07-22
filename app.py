@@ -160,18 +160,21 @@ def generate_status_block(pool_df):
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
 app.title = "Live Pool Dashboard"
 
-app.layout = dbc.Container([
-    dbc.Row([
-        dbc.Col(html.Div(id="last-update", className="text-start text-secondary", style={"fontSize": "0.75rem"}), width=6),
-        dbc.Col(html.Div(id="countdown-timer", className="text-end countdown-glow", style={"fontSize": "0.75rem"}), width=6)
-    ]),
-    dcc.Interval(id="auto-refresh", interval=15000, n_intervals=0),
-    dcc.Interval(id="countdown-interval", interval=1000, n_intervals=0),
-    html.Div(id="current-pool"),
-    html.Hr(className="bg-light"),
-    dbc.Button("Show Previous Pools", id="toggle-collapse", color="info", className="mb-2", style={"width": "100%"}),
-    dbc.Collapse(id="previous-pools", is_open=False)
-], fluid=True)
+app.layout = html.Div([
+    dbc.Container([
+        dbc.Row([
+            dbc.Col(html.Div(id="last-update", className="text-start text-secondary", style={"fontSize": "0.75rem"}), width=6),
+            dbc.Col(html.Div(id="countdown-timer", className="text-end countdown-glow", style={"fontSize": "0.75rem"}), width=6)
+        ]),
+        dcc.Interval(id="auto-refresh", interval=15000, n_intervals=0),
+        dcc.Interval(id="countdown-interval", interval=1000, n_intervals=0),
+        html.Div(id="current-pool"),
+        html.Hr(className="bg-light"),
+        dbc.Button("Show Previous Pools", id="toggle-collapse", color="info", className="mb-2", style={"width": "100%"}),
+        dbc.Collapse(id="previous-pools", is_open=False)
+    ], fluid=True)
+], style={"backgroundColor": "#0d1b2a", "minHeight": "100vh", "padding": "1rem"})
+
 
 last_updated_timestamp = datetime.now()
 
