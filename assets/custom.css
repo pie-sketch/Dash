@@ -137,3 +137,12 @@
   color: red;
   animation: glow-late 1.5s infinite ease-in-out;
 }
+
+/* Add in assets/custom.css */
+.mini-pool-box::-webkit-scrollbar {
+  height: 4px;
+}
+.mini-pool-box::-webkit-scrollbar-thumb {
+  background-color: #555;
+}
+
