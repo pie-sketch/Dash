@@ -122,3 +122,9 @@
     border: 1px solid red;
 }
 
+/* Red highlight for overdue staff */
+.overdue-box {
+    background-color: #3b0d0d !important;
+    border: 1px solid red;
+}
+
