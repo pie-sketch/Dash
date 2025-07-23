@@ -226,7 +226,7 @@ def scroll_to_pool(n_clicks, children):
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=port, debug=False)
 
 
 
