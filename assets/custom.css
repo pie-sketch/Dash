@@ -1,219 +1,76 @@
-/* Staff Name */
-.staff-name {
-    font-weight: bold;
-    font-size: 0.8rem;
-    text-align: center;
-}
-
-/* Load Display */
-.load-display {
-    font-size: 0.75rem;
-    text-align: center;
-    margin-top: 4px;
-}
-
-/* Duration Display */
-.duration-display {
-    font-size: 0.7rem;
-    text-align: center;
-    margin-top: 2px;
-    color: #aaa;
-}
-
-/* Late Reason (mobile friendly) */
-.late-reason {
-    font-size: 0.65rem;
-    text-align: center;
-    color: #ff6666;
-    margin-top: 3px;
-    font-style: italic;
-}
-
-/* Card visuals */
-.card-content {
-    background-color: #1a2639;
+/* ✅ Circular Carousel Container */
+.pool-progress-carousel {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 14px;
+    margin: 20px auto;
     padding: 10px;
-    border-radius: 10px;
-    width: 90px;
-    min-height: 80px;
-    text-align: center;
-    transition: transform 0.3s ease;
+    max-width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
 }
 
-.glow-card:hover {
-    box-shadow: 0 0 15px #33ccff;
-    transform: scale(1.05);
-}
-
-.animated-progress {
-    background: repeating-linear-gradient(45deg, #ffa500 0, #ffa500 10px, #ffcc80 10px, #ffcc80 20px);
-    background-size: 200% 200%;
-    animation: moveStripes 2s linear infinite;
-}
-
-.animated-late {
-    background: repeating-linear-gradient(45deg, #ff4444 0, #ff4444 10px, #ff9999 10px, #ff9999 20px);
-    background-size: 200% 200%;
-    animation: moveStripes 1.5s linear infinite;
-}
-
-@keyframes moveStripes {
-    0% { background-position: 0% 0%; }
-    100% { background-position: 100% 100%; }
-}
-
-.overdue-box {
-    background-color: #3b0d0d !important;
-    border: 1px solid red;
-}
-
-/* Grid Layout */
-.seat-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-    gap: 10px;
-    justify-items: center;
-}
-
-/* Header styles */
-.tl-name {
-    font-size: 1.6rem;
+/* 🎯 Date Centerpiece (Optional) */
+.pool-carousel-date {
+    font-size: 1rem;
     font-weight: bold;
-    color: gold;
+    color: #ffffff;
+    margin: 10px auto;
     text-align: center;
-}
-
-.pool-title {
-    font-size: 1.1rem;
-    font-weight: 500;
-    color: white;
-    text-align: center;
-}
-
-.pool-time {
-    font-size: 0.95rem;
-    color: #999;
-    text-align: center;
-}
-
-.pool-status {
-    font-size: 0.95rem;
-    margin-top: 4px;
-    text-align: center;
-}
-
-.pool-status span {
-    margin-right: 10px;
-}
-
-.pool-status .complete { color: #00ff88; }
-.pool-status .in-progress { color: orange; }
-.pool-status .late { color: red; }
-
-.pool-info-box {
-    font-size: 0.8rem;
-    color: #ccc;
-    text-align: center;
-    margin-top: 6px;
-}
-
-/* Background */
-body, html {
-    background-color: #0d1b2a !important;
-}
-
-/* ✨ Mobile-friendly Late Reason Visibility */
-@media (max-width: 768px) {
-    .card-content[title]:after {
-        content: attr(title);
-        display: block;
-        font-size: 0.65rem;
-        color: #ff9999;
-        text-align: center;
-        margin-top: 5px;
-        font-style: italic;
-        white-space: pre-line;
-    }
-}
-
-/* ✅ Unify font sizes for TL, Pool Title, Time, Status line, and Info Box */
-.pool-header .tl-name,
-.pool-header .pool-title,
-.pool-header .pool-time,
-.pool-header .pool-status,
-.pool-header .pool-info-box {
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: #e0e0e0;
-}
-
-.pool-status .complete {
-    color: #00ff88;
-    animation: pulseGreen 2s infinite;
-}
-.pool-status .in-progress {
-    color: orange;
-    animation: pulseOrange 2s infinite;
-}
-.pool-status .late {
-    color: red;
-    animation: pulseRed 2s infinite;
-}
-
-@keyframes pulseGreen {
-    0%, 100% { text-shadow: 0 0 6px #00ff88; transform: scale(1); }
-    50% { text-shadow: 0 0 12px #00ff88; transform: scale(1.08); }
-}
-@keyframes pulseOrange {
-    0%, 100% { text-shadow: 0 0 6px orange; transform: scale(1); }
-    50% { text-shadow: 0 0 12px orange; transform: scale(1.08); }
-}
-@keyframes pulseRed {
-    0%, 100% { text-shadow: 0 0 6px red; transform: scale(1); }
-    50% { text-shadow: 0 0 12px red; transform: scale(1.08); }
-}
-
-/* 🧊 Pool Progress Overview Grid */
-.pool-progress-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-    gap: 12px;
-    margin: 20px 0;
-}
-
-/* 📦 Each Pool Progress Card */
-.pool-progress-card {
-    text-align: center;
-    padding: 10px;
+    padding: 5px 15px;
+    border: 1px solid #555;
     border-radius: 12px;
-    font-size: 0.75rem;
+    background: #14213d;
+}
+
+/* 📦 Pool Progress Card Circular */
+.pool-progress-card {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    text-align: center;
+    padding: 8px;
+    font-size: 0.7rem;
     font-weight: bold;
     cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
     transition: transform 0.3s, box-shadow 0.3s;
 }
 
-/* ✨ Hover Glow */
+/* ✨ Glow on Hover */
 .pool-progress-card:hover {
-    box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
-    transform: scale(1.05);
+    box-shadow: 0 0 20px #33ccff;
+    transform: scale(1.1);
 }
 
 /* 🟢 Complete */
 .pool-complete {
-    background-color: #c8facc;  /* soft green */
+    background-color: #c8facc;
     color: #225522;
 }
 
 /* 🟠 In Progress */
 .pool-inprogress {
-    background-color: #ffe5b4;  /* soft orange */
+    background-color: #ffe5b4;
     color: #aa5500;
 }
 
 /* 🟡 Not Started */
 .pool-notstarted {
-    background-color: #fff7c2;  /* soft yellow */
+    background-color: #fff7c2;
     color: #666000;
 }
 
-
+/* 🔁 Responsive circular style */
+@media (max-width: 768px) {
+    .pool-progress-card {
+        width: 80px;
+        height: 80px;
+        font-size: 0.65rem;
+    }
+}
