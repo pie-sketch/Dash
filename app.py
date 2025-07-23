@@ -64,7 +64,7 @@ def generate_status_block(pool_df):
         # Duration display
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]):
             time_taken = row["End Time"] - row["Start Time"]
-            duration_str = str(time_taken).split(".")[0]
+            duration_str = str(time_taken).replace("0 days ", "").split(".")[0]
         else:
             time_taken = None
             duration_str = "-"
