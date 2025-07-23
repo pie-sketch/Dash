@@ -136,3 +136,41 @@ body, html {
     }
 }
 
+/* ✅ Unify font sizes for TL, Pool Title, Time, Status line, and Info Box */
+.pool-header .tl-name,
+.pool-header .pool-title,
+.pool-header .pool-time,
+.pool-header .pool-status,
+.pool-header .pool-info-box {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #e0e0e0;
+}
+
+.pool-status .complete {
+    color: #00ff88;
+    animation: pulseGreen 2s infinite;
+}
+.pool-status .in-progress {
+    color: orange;
+    animation: pulseOrange 2s infinite;
+}
+.pool-status .late {
+    color: red;
+    animation: pulseRed 2s infinite;
+}
+
+@keyframes pulseGreen {
+    0%, 100% { text-shadow: 0 0 6px #00ff88; transform: scale(1); }
+    50% { text-shadow: 0 0 12px #00ff88; transform: scale(1.08); }
+}
+@keyframes pulseOrange {
+    0%, 100% { text-shadow: 0 0 6px orange; transform: scale(1); }
+    50% { text-shadow: 0 0 12px orange; transform: scale(1.08); }
+}
+@keyframes pulseRed {
+    0%, 100% { text-shadow: 0 0 6px red; transform: scale(1); }
+    50% { text-shadow: 0 0 12px red; transform: scale(1.08); }
+}
+
+
