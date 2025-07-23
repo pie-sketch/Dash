@@ -166,6 +166,16 @@ def update_countdown(n):
     remain = max(0, 180 - (datetime.now() - last_updated).seconds)
     return f"\u23F3 Refreshing in: {remain:02d}s"
 
+@app.callback(
+    Output("countdown-timer", "children"),
+    Input("countdown-interval", "n_intervals")
+)
+def update_countdown(n):
+    elapsed = (datetime.now() - last_updated_timestamp).seconds
+    remaining = max(0, 180 - elapsed)
+    return f"⏳ Refreshing in: {remaining:02d}s"
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
