@@ -5,10 +5,21 @@ import pandas as pd
 from datetime import datetime, timedelta
 import os
 
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1LltJKL6wsXQt_6Qv3rwjfL9StACcMHsNQ2C_wTKw_iw/export?format=csv&gid=0"
+# Google Sheets CSV
+MAIN_SHEET_URL = "https://docs.google.com/spreadsheets/d/1LltJKL6wsXQt_6Qv3rwjfL9StACcMHsNQ2C_wTKw_iw/export?format=csv&gid=0"
+SEQUENCE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1LltJKL6wsXQt_6Qv3rwjfL9StACcMHsNQ2C_wTKw_iw/export?format=csv&gid=973487960"
 
-def load_data():
-    df = pd.read_csv(SHEET_URL)
+# Load Pool Sequences
+def load_pool_sequences():
+    df = pd.read_csv(SEQUENCE_SHEET_URL)
+    df["Pool ID"] = df["Pool Name"] + " - " + df["Tab"]
+    df["Date"] = df["Pool Name"].str.extract(r'(\d{8})').fillna('')
+    df["Short"] = df["Pools"]
+    return df
+
+# Load main sheet data
+def load_main_data():
+    df = pd.read_csv(MAIN_SHEET_URL)
     df["Start Time"] = pd.to_datetime(df["Start Time"], errors="coerce", dayfirst=True)
     df["End Time"] = pd.to_datetime(df["End Time"], errors="coerce", dayfirst=True)
     df["Pool Up"] = pd.to_datetime(df["Pool Up"], errors="coerce", dayfirst=True)
@@ -16,21 +27,40 @@ def load_data():
     df["Pool ID"] = df["Pool Name"] + " - " + df["Tab"]
     return df
 
-def get_status(row, pool_df):
-    if not pd.isna(row["Pool Up"]):
-        return "TL", "secondary", ""
-    if row["Load"] == 0:
-        return "Helper", "secondary", ""
+# Determine Pool Status
+def get_pool_status(pool_id, main_df):
+    pool_df = main_df[main_df["Pool ID"] == pool_id]
+    if pool_df.empty:
+        return "not-started", 0
+    if pool_df["Pool Up"].notna().any():
+        completed = pool_df["End Time"].notna().sum()
+        active = pool_df["Start Time"].notna().sum()
+        return ("complete" if completed == active else "in-progress"), pool_df["Load"].sum()
+    return "not-started", pool_df["Load"].sum()
 
-    tl_row = pool_df[pool_df["Pool Up"].notna()]
-    total_pool_load = tl_row["Load"].max() if not tl_row.empty else 0
-    active_staff = pool_df[(pool_df["Pool Up"].isna()) & (pool_df["Load"] > 0)]
-    num_staff = len(active_staff)
-    target_load = total_pool_load / num_staff if num_staff else 1
-
-    if abs(row["Load"] - target_load) <= 3:
-        return "Complete", "success", ""
-    return "In Progress", "warning", ""
+# Pool Progress Cards
+def generate_pool_progress_cards(seq_df, main_df):
+    cards = []
+    for _, row in seq_df.iterrows():
+        pool_id = row["Pool ID"]
+        display = row["Short"]
+        status, load = get_pool_status(pool_id, main_df)
+        color_map = {
+            "complete": "#99ffcc",
+            "in-progress": "#ffe0b3",
+            "not-started": "#ffff99"
+        }
+        card = html.Div(
+            html.Div([
+                html.Div(display, className="progress-label"),
+                html.Div(f"Load: {int(load)}", className="progress-load")
+            ], className="progress-card", id={"type": "scroll-target", "index": pool_id}, style={"backgroundColor": color_map[status]}),
+            className="progress-card-wrapper",
+            n_clicks=0,
+            id={"type": "progress-card", "index": pool_id}
+        )
+        cards.append(card)
+    return cards
 
 def generate_status_block(pool_df):
     tl_row = pool_df[pool_df["Pool Up"].notna()]
@@ -156,42 +186,46 @@ last_updated_timestamp = datetime.now()
     Output("last-update", "children"),
     Input("auto-refresh", "n_intervals")
 )
-def update_dashboard(n):
-    global last_updated_timestamp
-    last_updated_timestamp = datetime.now()
-    df = load_data()
-
-    pool_groups = df[df["Pool Up"].notna()].groupby("Pool ID")["Pool Up"].max().reset_index()
-    pool_groups = pool_groups.sort_values("Pool Up", ascending=False).head(9)
-    pool_ids = pool_groups["Pool ID"].tolist()
-
-    pool_blocks = [generate_status_block(df[df["Pool ID"] == pid]) for pid in pool_ids]
-    updated_time = last_updated_timestamp.strftime("Last updated: %d/%m/%Y %H:%M:%S")
-
-    if not pool_blocks:
-        return html.Div("No pool data."), [], updated_time
-
-    return pool_blocks[0], pool_blocks[1:], updated_time
+def refresh_data(n):
+    main_df = load_main_data()
+    seq_df = load_pool_sequences()
+    return main_df.to_dict("records"), seq_df.to_dict("records")
 
 @app.callback(
-    Output("countdown-timer", "children"),
-    Input("countdown-interval", "n_intervals")
+    Output("progress-cards", "children"),
+    Output("pool-blocks", "children"),
+    Input("main-data", "data"),
+    Input("sequence-data", "data")
 )
-def update_countdown(n):
-    global last_updated_timestamp
-    elapsed = (datetime.now() - last_updated_timestamp).seconds
-    remaining = max(0, 180 - elapsed)
-    return f"\u23F3 Refreshing in: {remaining:02d}s"
+def update_ui(main_data, seq_data):
+    main_df = pd.DataFrame(main_data)
+    seq_df = pd.DataFrame(seq_data)
+    cards = generate_pool_progress_cards(seq_df, main_df)
+    blocks = []
+    for pool_id in seq_df["Pool ID"]:
+        pool_df = main_df[main_df["Pool ID"] == pool_id]
+        if not pool_df.empty:
+            block = html.Div(
+                generate_status_block(pool_df),
+                id={"type": "pool-block", "index": pool_id}
+            )
+            blocks.append(block)
+    return cards, blocks
 
 @app.callback(
-    Output("previous-pools", "is_open"),
-    Input("toggle-collapse", "n_clicks"),
-    State("previous-pools", "is_open"),
+    Output("pool-blocks", "children", allow_duplicate=True),
+    Input({"type": "progress-card", "index": dash.ALL}, "n_clicks"),
+    State("pool-blocks", "children"),
     prevent_initial_call=True
 )
-def toggle_previous(n, is_open):
-    return not is_open
+def scroll_to_pool(n_clicks, children):
+    triggered = dash.callback_context.triggered[0]["prop_id"]
+    pool_id = eval(triggered.split(".")[0])["index"]
+    scroll_script = html.Script(f'document.getElementById("{{\"type\":\"pool-block\",\"index\":\"{pool_id}\"}}")?.scrollIntoView({{behavior: "smooth"}});')
+    return children + [scroll_script]
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run_server(host="0.0.0.0", port=port, debug=True)
+
+
