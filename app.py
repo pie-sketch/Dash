@@ -5,19 +5,12 @@ import pandas as pd
 from datetime import datetime, timedelta
 import os
 
-# URLs
+# --- Google Sheet URLs ---
 MAIN_SHEET_URL = "https://docs.google.com/spreadsheets/d/1LltJKL6wsXQt_6Qv3rwjfL9StACcMHsNQ2C_wTKw_iw/export?format=csv&gid=0"
 SEQUENCE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1LltJKL6wsXQt_6Qv3rwjfL9StACcMHsNQ2C_wTKw_iw/export?format=csv&gid=973487960"
 
-# Load sequence with short Pool ID names
-def load_pool_sequences():
-    df = pd.read_csv(SEQUENCE_SHEET_URL)
-    df["Pool ID"] = df["Pool Name"] + " - " + df["Tab"]
-    df["Short"] = df["Pools id"]
-    return df.set_index("Pool ID")["Short"].to_dict()
-
-# Load main data with proper types
-def load_data():
+# --- Loaders ---
+def load_main_data():
     df = pd.read_csv(MAIN_SHEET_URL)
     df["Start Time"] = pd.to_datetime(df["Start Time"], errors="coerce", dayfirst=True)
     df["End Time"] = pd.to_datetime(df["End Time"], errors="coerce", dayfirst=True)
@@ -26,7 +19,13 @@ def load_data():
     df["Pool ID"] = df["Pool Name"] + " - " + df["Tab"]
     return df
 
-# Get individual status
+def load_pool_sequences():
+    df = pd.read_csv(SEQUENCE_SHEET_URL)
+    df["Pool ID"] = df["Pool Name"] + " - " + df["Tab"]
+    df["Short"] = df["Pools id"]
+    return df
+
+# --- Utilities ---
 def get_status(row, pool_df):
     if not pd.isna(row["Pool Up"]):
         return "TL", "secondary", ""
@@ -43,15 +42,48 @@ def get_status(row, pool_df):
         return "Complete", "success", ""
     return "In Progress", "warning", ""
 
-# Generate card block per pool
-def generate_status_block(pool_df, short_name):
+def get_pool_status(pool_id, main_df):
+    pool_df = main_df[main_df["Pool ID"] == pool_id]
+    if pool_df.empty:
+        return "not-started", 0
+    if pool_df["Pool Up"].notna().any():
+        completed = pool_df["End Time"].notna().sum()
+        active = pool_df["Start Time"].notna().sum()
+        return ("complete" if completed == active else "in-progress"), pool_df["Load"].sum()
+    return "not-started", pool_df["Load"].sum()
+
+# --- Visual Components ---
+def generate_pool_progress_cards(seq_df, main_df):
+    cards = []
+    for _, row in seq_df.iterrows():
+        pool_id = row["Pool ID"]
+        display = row["Short"]
+        status, load = get_pool_status(pool_id, main_df)
+        color_map = {
+            "complete": "#99ffcc",
+            "in-progress": "#ffe0b3",
+            "not-started": "#ffff99"
+        }
+        card = html.Div(
+            html.Div([
+                html.Div(display, className="progress-label"),
+                html.Div(f"Load: {int(load)}", className="progress-load")
+            ], className="progress-card", id={"type": "scroll-target", "index": pool_id}, style={"backgroundColor": color_map[status]}),
+            className="progress-card-wrapper",
+            n_clicks=0,
+            id={"type": "progress-card", "index": pool_id}
+        )
+        cards.append(card)
+    return cards
+
+def generate_status_block(pool_df):
     tl_row = pool_df[pool_df["Pool Up"].notna()]
     if not tl_row.empty:
         tl = tl_row.iloc[0]
         pool_name = tl["Pool Name"]
         tab = tl["Tab"]
         pool_up_time = tl["Pool Up"]
-        pool_up = pool_up_time.strftime("%d/%m/%Y %H:%M:%S")
+        pool_up = pool_up_time.strftime("%d/%m/%Y %H:%M:%S") if isinstance(pool_up_time, pd.Timestamp) else "-"
         tl_name = tl["Name"]
         total_count = int(tl["Load"])
     else:
@@ -97,93 +129,113 @@ def generate_status_block(pool_df, short_name):
             box_class += " overdue-box"
 
         progress_component = html.Div(
-            dbc.Progress(value=load_percent, color=color, striped=(status == "In Progress"), style={"height": "16px", "width": "100%"}),
+            dbc.Progress(
+                value=load_percent,
+                color=color,
+                striped=(status == "In Progress"),
+                style={"height": "16px", "width": "100%"}
+            ),
             title=late_reason if late_reason else None,
             className=progress_wrapper_class
         )
 
-        visual_rows.append(
-            html.Div([
-                html.Div(name, className="staff-name"),
-                progress_component,
-                html.Div(load_display, className="load-display"),
-                html.Div(duration_str, className="duration-display"),
-                html.Div(late_reason, className="late-reason") if late_reason else None
-            ], className=box_class)
-        )
+        visual_rows.append(html.Div([
+            html.Div(name, className="staff-name"),
+            progress_component,
+            html.Div(load_display, className="load-display"),
+            html.Div(duration_str, className="duration-display"),
+            html.Div(late_reason, className="late-reason") if late_reason else None
+        ], className=box_class))
 
     return dbc.Card([
-        dbc.CardHeader([
+        dbc.CardHeader(html.Div([
+            html.Div(f"{tl_name}", className="tl-name"),
+            html.Div(f"{pool_name} - {tab}", className="pool-title"),
+            html.Div(f"⬆ Pool Up: {pool_up}", className="pool-time"),
             html.Div([
-                html.Div(f"{tl_name}", className="tl-name"),
-                html.Div(f"{short_name}", className="pool-title"),
-                html.Div(f"⬆ Pool Up: {pool_up}", className="pool-time"),
-                html.Div([
-                    html.Span("🟢 Complete", className="complete"),
-                    html.Span("  🔶 In Progress", className="in-progress"),
-                    html.Span("  🔴 Late", className="late")
-                ], className="pool-status"),
-                html.Div([
-                    html.Span(f"Total Count: {total_count}", style={"marginRight": "12px"}),
-                    html.Span(f"Manpower: {manpower}", style={"marginRight": "12px"}),
-                    html.Span(f"Expected Completion: {expected_time.strftime('%H:%M:%S') if expected_time else '-'}")
-                ], className="pool-info-box")
-            ], className="pool-header")
-        ]),
+                html.Span("🟢 Complete", className="complete"),
+                html.Span("  🔶 In Progress", className="in-progress"),
+                html.Span("  🔴 Late", className="late")
+            ], className="pool-status"),
+            html.Div([
+                html.Span(f"Total Count: {total_count}", style={"marginRight": "12px"}),
+                html.Span(f"Manpower: {manpower}", style={"marginRight": "12px"}),
+                html.Span(f"Expected Completion: {expected_time.strftime('%H:%M:%S') if expected_time else '-'}")
+            ], className="pool-info-box")
+        ], className="pool-header")),
         dbc.CardBody(html.Div(visual_rows, className="seat-grid", style={"padding": "10px"}))
     ], className="mb-4", style={"backgroundColor": "#0d1b2a", "borderRadius": "15px"})
 
+# --- App Init ---
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
 app.title = "Live Pool Dashboard"
 
 app.layout = dbc.Container([
+    dcc.Store(id="main-data"),
+    dcc.Store(id="sequence-data"),
+
     dbc.Row([
         dbc.Col(html.Div(id="last-update", className="text-start text-secondary", style={"font-size": "0.75rem"}), width=6),
         dbc.Col(html.Div(id="countdown-timer", className="text-end countdown-glow", style={"font-size": "0.75rem"}), width=6)
     ], align="center"),
+
     dcc.Interval(id="auto-refresh", interval=180000, n_intervals=0),
     dcc.Interval(id="countdown-interval", interval=1000, n_intervals=0),
-    html.Div(id="current-pool"),
+
+    html.Div(id="progress-cards"),
     html.Hr(className="bg-light"),
+    html.Div(id="current-pool"),
     dbc.Button("Show Previous Pools", id="toggle-collapse", color="info", className="mb-2", style={"width": "100%"}),
-    dbc.Collapse(id="previous-pools", is_open=False)
+    dbc.Collapse(id="previous-pools", is_open=False),
+    html.Div(id="pool-blocks")
 ], fluid=True, style={"background-color": "#0d1b2a", "padding": "1rem"})
 
 last_updated_timestamp = datetime.now()
 
+# --- Callbacks ---
 @app.callback(
+    Output("main-data", "data"),
+    Output("sequence-data", "data"),
+    Input("auto-refresh", "n_intervals")
+)
+def refresh_data(n):
+    main_df = load_main_data()
+    seq_df = load_pool_sequences()
+    return main_df.to_dict("records"), seq_df.to_dict("records")
+
+@app.callback(
+    Output("progress-cards", "children"),
+    Output("pool-blocks", "children"),
     Output("current-pool", "children"),
     Output("previous-pools", "children"),
     Output("last-update", "children"),
-    Input("auto-refresh", "n_intervals")
+    Input("main-data", "data"),
+    Input("sequence-data", "data")
 )
-def update_dashboard(n):
+def render_blocks(main_data, seq_data):
     global last_updated_timestamp
+    main_df = pd.DataFrame(main_data)
+    seq_df = pd.DataFrame(seq_data)
     last_updated_timestamp = datetime.now()
 
-    main_df = load_data()
-    pool_map = load_pool_sequences()
+    cards = generate_pool_progress_cards(seq_df, main_df)
+    pool_blocks = []
 
     pool_groups = main_df[main_df["Pool Up"].notna()].groupby("Pool ID")["Pool Up"].max().reset_index()
-    pool_groups = pool_groups.sort_values("Pool Up", ascending=False).head(4)
+    pool_groups = pool_groups.sort_values("Pool Up", ascending=False).head(9)
     pool_ids = pool_groups["Pool ID"].tolist()
+    blocks = [generate_status_block(main_df[main_df["Pool ID"] == pid]) for pid in pool_ids]
 
-    pool_blocks = []
-    for pid in pool_ids:
-        pool_df = main_df[main_df["Pool ID"] == pid]
-        short = pool_map.get(pid, pid)
-        block = generate_status_block(pool_df, short)
-        pool_blocks.append(block)
-
-    updated_time = last_updated_timestamp.strftime("Last updated: %H:%M:%S")
-    return pool_blocks[0] if pool_blocks else html.Div("No current pool."), pool_blocks[1:], updated_time
+    updated_time = last_updated_timestamp.strftime("Last updated: %d/%m/%Y %H:%M:%S")
+    current = blocks[0] if blocks else html.Div("No current pool.")
+    previous = blocks[1:] if len(blocks) > 1 else []
+    return cards, blocks, current, previous, updated_time
 
 @app.callback(
     Output("countdown-timer", "children"),
     Input("countdown-interval", "n_intervals")
 )
 def update_countdown(n):
-    global last_updated_timestamp
     elapsed = (datetime.now() - last_updated_timestamp).seconds
     remaining = max(0, 180 - elapsed)
     return f"⏳ Refreshing in: {remaining:02d}s"
