@@ -1,9 +1,35 @@
-/* ==== BASE COLORS ==== */
-body, html {
-    background-color: #0d1b2a !important;
+/* Staff Name */
+.staff-name {
+    font-weight: bold;
+    font-size: 0.8rem;
+    text-align: center;
 }
 
-/* ==== CARD STYLES ==== */
+/* Load Display */
+.load-display {
+    font-size: 0.75rem;
+    text-align: center;
+    margin-top: 4px;
+}
+
+/* Duration Display */
+.duration-display {
+    font-size: 0.7rem;
+    text-align: center;
+    margin-top: 2px;
+    color: #aaa;
+}
+
+/* Late Reason (mobile friendly) */
+.late-reason {
+    font-size: 0.65rem;
+    text-align: center;
+    color: #ff6666;
+    margin-top: 3px;
+    font-style: italic;
+}
+
+/* Card visuals */
 .card-content {
     background-color: #1a2639;
     padding: 10px;
@@ -13,110 +39,35 @@ body, html {
     text-align: center;
     transition: transform 0.3s ease;
 }
+
 .glow-card:hover {
     box-shadow: 0 0 15px #33ccff;
     transform: scale(1.05);
-    transition: 0.3s ease-in-out;
 }
+
+.animated-progress {
+    background: repeating-linear-gradient(45deg, #ffa500 0, #ffa500 10px, #ffcc80 10px, #ffcc80 20px);
+    background-size: 200% 200%;
+    animation: moveStripes 2s linear infinite;
+}
+
+.animated-late {
+    background: repeating-linear-gradient(45deg, #ff4444 0, #ff4444 10px, #ff9999 10px, #ff9999 20px);
+    background-size: 200% 200%;
+    animation: moveStripes 1.5s linear infinite;
+}
+
+@keyframes moveStripes {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 100% 100%; }
+}
+
 .overdue-box {
     background-color: #3b0d0d !important;
     border: 1px solid red;
 }
 
-/* ==== PROGRESS STRIPES ==== */
-.animated-progress,
-.animated-late {
-    background-size: 200% 200%;
-    animation: moveStripes linear infinite;
-}
-.animated-progress {
-    background: repeating-linear-gradient(45deg, #ffa500 0, #ffa500 10px, #ffcc80 10px, #ffcc80 20px);
-    animation-duration: 2s;
-}
-.animated-late {
-    background: repeating-linear-gradient(45deg, #ff4444 0, #ff4444 10px, #ff9999 10px, #ff9999 20px);
-    animation-duration: 1.5s;
-}
-@keyframes moveStripes {
-    0%   { background-position: 0% 0%; }
-    100% { background-position: 100% 100%; }
-}
-
-/* ==== COUNTDOWN TIMER ==== */
-.countdown-glow {
-    color: #ccc;
-    text-align: right;
-    animation: glow-pulse 2s infinite ease-in-out;
-}
-@keyframes glow-pulse {
-    0%, 100% { text-shadow: 0 0 2px #33ccff; }
-    50%      { text-shadow: 0 0 10px #33ccff; }
-}
-
-/* ==== HEADER & TITLES ==== */
-.pool-header {
-    text-align: center;
-    margin-bottom: 10px;
-}
-.pool-header > div {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    color: #ccc;
-}
-.tl-name {
-    font-size: 1.6rem;
-    font-weight: bold;
-    color: gold;
-}
-.pool-title {
-    font-size: 1.1rem;
-    font-weight: 500;
-    color: white;
-}
-.pool-time {
-    font-size: 0.95rem;
-    color: #999;
-}
-
-/* ==== POOL STATUS LEGEND ==== */
-.pool-status {
-    font-size: 0.95rem;
-    margin-top: 4px;
-}
-.pool-status span {
-    margin-right: 10px;
-}
-.pool-status .complete,
-.pool-status .in-progress,
-.pool-status .late {
-    animation: 1.5s infinite ease-in-out;
-}
-.pool-status .complete {
-    color: #00ff88;
-    animation-name: glow-complete;
-}
-.pool-status .in-progress {
-    color: orange;
-    animation-name: glow-inprogress;
-}
-.pool-status .late {
-    color: red;
-    animation-name: glow-late;
-}
-
-@keyframes glow-complete {
-    0%, 100% { text-shadow: 0 0 2px #00ff88; }
-    50%      { text-shadow: 0 0 10px #00ff88; }
-}
-@keyframes glow-inprogress {
-    0%, 100% { text-shadow: 0 0 2px orange; }
-    50%      { text-shadow: 0 0 10px orange; }
-}
-@keyframes glow-late {
-    0%, 100% { text-shadow: 0 0 2px red; }
-    50%      { text-shadow: 0 0 10px red; }
-}
-
-/* ==== GRID FOR PEOPLE STATUS ==== */
+/* Grid Layout */
 .seat-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
@@ -124,58 +75,49 @@ body, html {
     justify-items: center;
 }
 
-/* ==== POOL PROGRESS SECTION ==== */
-.pool-progress-container {
-    margin-bottom: 12px;
-}
-.pool-progress-container .title {
-    font-size: 0.9rem;
+/* Header styles */
+.tl-name {
+    font-size: 1.6rem;
     font-weight: bold;
-    color: #ccc;
-    margin-bottom: 6px;
-}
-
-/* Scrollable Row */
-.pool-progress-row {
-    display: flex;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    gap: 10px;
-    padding-bottom: 6px;
-    justify-content: flex-start;
-    direction: ltr;
-    width: 100%;
-}
-/* Scrollbar style */
-.pool-progress-row::-webkit-scrollbar {
-    height: 5px;
-}
-.pool-progress-row::-webkit-scrollbar-thumb {
-    background-color: #666;
-    border-radius: 3px;
-}
-
-/* Mini Pool Box */
-.mini-pool-box {
-    background-color: #1a1a1a;
-    border-radius: 8px;
-    padding: 6px 12px;
+    color: gold;
     text-align: center;
-    min-width: 120px;
-    max-width: 120px;
-    transition: all 0.3s ease-in-out;
-}
-.mini-pool-box:hover {
-    box-shadow: 0 0 10px #33ccff;
-    transform: scale(1.03);
 }
 
-/* ==== MOBILE RESPONSIVE ==== */
-@media (max-width: 480px) {
-    .tl-name { font-size: 1rem; }
-    .pool-title { font-size: 0.85rem; }
-    .pool-time,
-    .pool-status,
-    .pool-info-box div { font-size: 0.7rem; }
-    .card-content { width: 80px; padding: 8px; }
+.pool-title {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: white;
+    text-align: center;
+}
+
+.pool-time {
+    font-size: 0.95rem;
+    color: #999;
+    text-align: center;
+}
+
+.pool-status {
+    font-size: 0.95rem;
+    margin-top: 4px;
+    text-align: center;
+}
+
+.pool-status span {
+    margin-right: 10px;
+}
+
+.pool-status .complete { color: #00ff88; }
+.pool-status .in-progress { color: orange; }
+.pool-status .late { color: red; }
+
+.pool-info-box {
+    font-size: 0.8rem;
+    color: #ccc;
+    text-align: center;
+    margin-top: 6px;
+}
+
+/* Background */
+body, html {
+    background-color: #0d1b2a !important;
 }
