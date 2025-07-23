@@ -77,10 +77,22 @@ def generate_status_block(pool_df, expected_start_time):
 
         # --- LATE LOGIC ---
         overdue = False
+        tooltip_text = ""
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]) and total_load:
             expected_duration = (load / 150) * 60
             expected_end_time = expected_start_time + timedelta(minutes=expected_duration)
             overdue = row["End Time"] > expected_end_time
+            if overdue:
+                expected_end_str = expected_end_time.strftime("%H:%M")
+                actual_end_str = row["End Time"].strftime("%H:%M")
+                diff = row["End Time"] - expected_end_time
+                minutes_late = int(diff.total_seconds() // 60)
+                tooltip_text = (
+                    f"🔴 Late\n"
+                    f"Expected to finish by: {expected_end_str}\n"
+                    f"Actual finish: {actual_end_str}\n"
+                    f"Over by: {minutes_late} minutes"
+                )
 
         box_class = "card-content glow-card"
         progress_wrapper_class = ""
@@ -99,7 +111,7 @@ def generate_status_block(pool_df, expected_start_time):
                 ),
                 html.Div(load_display, style={"font-size": "0.75rem", "text-align": "center", "marginTop": "4px"}),
                 html.Div(duration_str, style={"font-size": "0.7rem", "text-align": "center", "marginTop": "2px", "color": "#aaa"})
-            ], className=box_class)
+            ], className=box_class, title=tooltip_text)
         )
 
     return dbc.Card([
