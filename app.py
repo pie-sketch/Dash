@@ -14,7 +14,7 @@ def load_pool_sequences():
     df = pd.read_csv(SEQUENCE_SHEET_URL)
     df["Pool ID"] = df["Pool Name"] + " - " + df["Tab"]
     df["Date"] = df["Pool Name"].str.extract(r'(\d{8})').fillna('')
-    df["Short"] = df["Pools"]
+    df["Short"] = df["Pools id"]
     return df
 
 # Load main sheet data
