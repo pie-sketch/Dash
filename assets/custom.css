@@ -173,4 +173,47 @@ body, html {
     50% { text-shadow: 0 0 12px red; transform: scale(1.08); }
 }
 
+/* 🧊 Pool Progress Overview Grid */
+.pool-progress-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+}
+
+/* 📦 Each Pool Progress Card */
+.pool-progress-card {
+    text-align: center;
+    padding: 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+/* ✨ Hover Glow */
+.pool-progress-card:hover {
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+}
+
+/* 🟢 Complete */
+.pool-complete {
+    background-color: #c8facc;  /* soft green */
+    color: #225522;
+}
+
+/* 🟠 In Progress */
+.pool-inprogress {
+    background-color: #ffe5b4;  /* soft orange */
+    color: #aa5500;
+}
+
+/* 🟡 Not Started */
+.pool-notstarted {
+    background-color: #fff7c2;  /* soft yellow */
+    color: #666000;
+}
+
 
