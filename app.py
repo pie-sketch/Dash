@@ -186,12 +186,18 @@ def update_dashboard(n):
         pid = row["Pool ID"]
         actual_pool_up = row["Pool Up"]
 
+        if pd.isna(actual_pool_up):
+            continue
+
         if i == 0:
             expected_start_map[pid] = actual_pool_up
         else:
             prev_pid = pool_order.iloc[i - 1]["Pool ID"]
-            prev_expected_end = expected_start_map[prev_pid] + timedelta(hours=1, minutes=5)
-            expected_start_map[pid] = max(actual_pool_up, prev_expected_end)
+            if prev_pid not in expected_start_map:
+                expected_start_map[pid] = actual_pool_up
+            else:
+                prev_expected_end = expected_start_map[prev_pid] + timedelta(hours=1, minutes=5)
+                expected_start_map[pid] = max(actual_pool_up, prev_expected_end)
 
     pool_groups = df[df["Pool Up"].notna()].groupby("Pool ID")["Pool Up"].max().reset_index()
     pool_groups = pool_groups.sort_values("Pool Up", ascending=False).head(9)
