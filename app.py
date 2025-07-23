@@ -87,15 +87,22 @@ def generate_status_block(pool_df):
             progress_wrapper_class = "animated-late"
             box_class += " overdue-box"
 
-        tooltip = {"title": late_reason} if late_reason else {}
+        # ✅ Wrap Progress with tooltip-compatible html.Div
+        progress_component = html.Div(
+            dbc.Progress(
+                value=load_percent,
+                color=color,
+                striped=(status == "In Progress"),
+                style={"height": "16px", "width": "100%"}
+            ),
+            title=late_reason if late_reason else None,
+            className=progress_wrapper_class
+        )
 
         visual_rows.append(
             html.Div([
                 html.Div(name, className="staff-name"),
-                html.Div(
-                    dbc.Progress(value=load_percent, color=color, striped=(status == "In Progress"), style={"height": "16px", "width": "100%"}, **tooltip),
-                    className=progress_wrapper_class
-                ),
+                progress_component,
                 html.Div(load_display, className="load-display"),
                 html.Div(duration_str, className="duration-display"),
                 html.Div(late_reason, className="late-reason") if late_reason else None
@@ -133,7 +140,7 @@ app.layout = dbc.Container([
         dbc.Col(html.Div(id="last-update", className="text-start text-secondary", style={"font-size": "0.75rem"}), width=6),
         dbc.Col(html.Div(id="countdown-timer", className="text-end countdown-glow", style={"font-size": "0.75rem"}), width=6)
     ], align="center"),
-    dcc.Interval(id="auto-refresh", interval=180000, n_intervals=0),  # 3 minutes
+    dcc.Interval(id="auto-refresh", interval=180000, n_intervals=0),
     dcc.Interval(id="countdown-interval", interval=1000, n_intervals=0),
     html.Div(id="current-pool"),
     html.Hr(className="bg-light"),
@@ -160,6 +167,10 @@ def update_dashboard(n):
 
     pool_blocks = [generate_status_block(df[df["Pool ID"] == pid]) for pid in pool_ids]
     updated_time = last_updated_timestamp.strftime("Last updated: %d/%m/%Y %H:%M:%S")
+
+    if not pool_blocks:
+        return html.Div("No pool data."), [], updated_time
+
     return pool_blocks[0], pool_blocks[1:], updated_time
 
 @app.callback(
@@ -184,5 +195,3 @@ def toggle_previous(n, is_open):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
-
-
