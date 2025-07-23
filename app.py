@@ -1,4 +1,3 @@
-# --- Imports ---
 import dash
 import dash_bootstrap_components as dbc
 from dash import html, dcc, Input, Output, State
@@ -6,11 +5,8 @@ import pandas as pd
 from datetime import datetime, timedelta
 import os
 
-# --- Constants ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1LltJKL6wsXQt_6Qv3rwjfL9StACcMHsNQ2C_wTKw_iw/export?format=csv&gid=0"
-GRACE_MINUTES = 5
 
-# --- Load Data ---
 def load_data():
     df = pd.read_csv(SHEET_URL)
     df["Start Time"] = pd.to_datetime(df["Start Time"], errors="coerce", dayfirst=True)
@@ -20,12 +16,11 @@ def load_data():
     df["Pool ID"] = df["Pool Name"] + " - " + df["Tab"]
     return df
 
-# --- Status Assignment ---
 def get_status(row, pool_df):
     if not pd.isna(row["Pool Up"]):
-        return "TL", "secondary"
+        return "TL", "secondary", ""
     if row["Load"] == 0:
-        return "Helper", "secondary"
+        return "Helper", "secondary", ""
 
     tl_row = pool_df[pool_df["Pool Up"].notna()]
     total_pool_load = tl_row["Load"].max() if not tl_row.empty else 0
@@ -34,10 +29,9 @@ def get_status(row, pool_df):
     target_load = total_pool_load / num_staff if num_staff else 1
 
     if abs(row["Load"] - target_load) <= 3:
-        return "Complete", "success"
-    return "In Progress", "warning"
+        return "Complete", "success", ""
+    return "In Progress", "warning", ""
 
-# --- Main Visual Block ---
 def generate_status_block(pool_df):
     tl_row = pool_df[pool_df["Pool Up"].notna()]
     if not tl_row.empty:
@@ -47,7 +41,7 @@ def generate_status_block(pool_df):
         pool_up_time = tl["Pool Up"]
         pool_up = pool_up_time.strftime("%d/%m/%Y %H:%M:%S")
         tl_name = tl["Name"]
-        total_count = int(tl["Load"])
+        total_count = int(tl["Load"]) if "Load" in tl else 0
     else:
         pool_name, tab, pool_up, tl_name = "-", "-", "-", "-"
         total_count = 0
@@ -63,28 +57,27 @@ def generate_status_block(pool_df):
     for _, row in active_rows.iterrows():
         name = row["Name"]
         load = row["Load"]
-        status, color = get_status(row, pool_df)
-
+        status, color, _ = get_status(row, pool_df)
         load_percent = min(100, int((load / target_load) * 100)) if target_load else 0
         load_display = f"{int(load)}"
 
-        # Duration calculation
+        # Duration display
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]):
             time_taken = row["End Time"] - row["Start Time"]
-            duration_str = str(time_taken).split(".")[0]  # HH:MM:SS
+            duration_str = str(time_taken).split(".")[0]
         else:
             time_taken = None
             duration_str = "-"
 
-        # Late logic with grace
+        # Late logic
         overdue = False
         late_reason = ""
-        if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]) and total_load:
-            actual_duration = row["End Time"] - row["Start Time"]
-            expected_minutes = (row["Load"] / 2.5) + GRACE_MINUTES
-            if actual_duration.total_seconds() > expected_minutes * 60:
+        if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]) and load > 0:
+            actual_duration = (row["End Time"] - row["Start Time"]).total_seconds() / 60
+            expected_duration = (load / 2.5) + 5  # minutes
+            if actual_duration > expected_duration:
                 overdue = True
-                late_reason = f"Late: took {int(actual_duration.total_seconds() // 60)}m vs expected {int(expected_minutes)}m"
+                late_reason = f"Expected ≤ {int(expected_duration)}min, got {int(actual_duration)}min"
 
         box_class = "card-content glow-card"
         progress_wrapper_class = ""
@@ -94,29 +87,25 @@ def generate_status_block(pool_df):
             progress_wrapper_class = "animated-late"
             box_class += " overdue-box"
 
+        tooltip = {"title": late_reason} if late_reason else {}
+
         visual_rows.append(
             html.Div([
                 html.Div(name, className="staff-name"),
                 html.Div(
-                    dbc.Progress(
-                        value=load_percent,
-                        color=color,
-                        striped=(status == "In Progress"),
-                        style={"height": "16px", "width": "100%"},
-                        title=late_reason if overdue else None
-                    ),
+                    dbc.Progress(value=load_percent, color=color, striped=(status == "In Progress"), style={"height": "16px", "width": "100%"}, **tooltip),
                     className=progress_wrapper_class
                 ),
                 html.Div(load_display, className="load-display"),
                 html.Div(duration_str, className="duration-display"),
-                html.Div(late_reason, className="late-reason") if overdue else None
+                html.Div(late_reason, className="late-reason") if late_reason else None
             ], className=box_class)
         )
 
     return dbc.Card([
         dbc.CardHeader([
             html.Div([
-                html.Div(tl_name, className="tl-name"),
+                html.Div(f"{tl_name}", className="tl-name"),
                 html.Div(f"{pool_name} - {tab}", className="pool-title"),
                 html.Div(f"⬆ Pool Up: {pool_up}", className="pool-time"),
                 html.Div([
@@ -132,30 +121,66 @@ def generate_status_block(pool_df):
             ], className="pool-header")
         ]),
         dbc.CardBody(
-            html.Div(visual_rows, className="seat-grid")
+            html.Div(visual_rows, className="seat-grid", style={"padding": "10px"})
         )
-    ], className="mb-4")
+    ], className="mb-4", style={"backgroundColor": "#0d1b2a", "borderRadius": "15px"})
 
-# --- App Setup ---
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
 app.title = "Live Pool Dashboard"
 
 app.layout = dbc.Container([
-    dcc.Interval(id="auto-refresh", interval=180000, n_intervals=0),
-    html.Div(id="current-pool")
-], fluid=True)
+    dbc.Row([
+        dbc.Col(html.Div(id="last-update", className="text-start text-secondary", style={"font-size": "0.75rem"}), width=6),
+        dbc.Col(html.Div(id="countdown-timer", className="text-end countdown-glow", style={"font-size": "0.75rem"}), width=6)
+    ], align="center"),
+    dcc.Interval(id="auto-refresh", interval=180000, n_intervals=0),  # 3 minutes
+    dcc.Interval(id="countdown-interval", interval=1000, n_intervals=0),
+    html.Div(id="current-pool"),
+    html.Hr(className="bg-light"),
+    dbc.Button("Show Previous Pools", id="toggle-collapse", color="info", className="mb-2", style={"width": "100%"}),
+    dbc.Collapse(id="previous-pools", is_open=False)
+], fluid=True, style={"background-color": "#0d1b2a", "padding": "1rem"})
+
+last_updated_timestamp = datetime.now()
 
 @app.callback(
     Output("current-pool", "children"),
+    Output("previous-pools", "children"),
+    Output("last-update", "children"),
     Input("auto-refresh", "n_intervals")
 )
 def update_dashboard(n):
+    global last_updated_timestamp
+    last_updated_timestamp = datetime.now()
     df = load_data()
-    latest_pool_id = df[df["Pool Up"].notna()].sort_values("Pool Up", ascending=False).iloc[0]["Pool ID"]
-    pool_df = df[df["Pool ID"] == latest_pool_id]
-    return generate_status_block(pool_df)
+
+    pool_groups = df[df["Pool Up"].notna()].groupby("Pool ID")["Pool Up"].max().reset_index()
+    pool_groups = pool_groups.sort_values("Pool Up", ascending=False).head(9)
+    pool_ids = pool_groups["Pool ID"].tolist()
+
+    pool_blocks = [generate_status_block(df[df["Pool ID"] == pid]) for pid in pool_ids]
+    updated_time = last_updated_timestamp.strftime("Last updated: %d/%m/%Y %H:%M:%S")
+    return pool_blocks[0], pool_blocks[1:], updated_time
+
+@app.callback(
+    Output("countdown-timer", "children"),
+    Input("countdown-interval", "n_intervals")
+)
+def update_countdown(n):
+    global last_updated_timestamp
+    elapsed = (datetime.now() - last_updated_timestamp).seconds
+    remaining = max(0, 180 - elapsed)
+    return f"\u23F3 Refreshing in: {remaining:02d}s"
+
+@app.callback(
+    Output("previous-pools", "is_open"),
+    Input("toggle-collapse", "n_clicks"),
+    State("previous-pools", "is_open"),
+    prevent_initial_call=True
+)
+def toggle_previous(n, is_open):
+    return not is_open
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8050))
     app.run(host="0.0.0.0", port=port, debug=False)
-
