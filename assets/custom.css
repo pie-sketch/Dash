@@ -31,18 +31,18 @@
 
 /* Card visuals */
 .card-content {
-    background-color: #1a2639;
-    padding: 10px;
-    border-radius: 10px;
-    width: 90px;
-    min-height: 80px;
-    text-align: center;
-    transition: transform 0.3s ease;
+  background-color: #1a2639;
+  padding: 10px;
+  border-radius: 10px;
+  width: 90px;
+  min-height: 80px;
+  text-align: center;
+  transition: transform 0.3s cubic-bezier(0.25, 1.5, 0.5, 1), box-shadow 0.3s ease;
 }
 
-.glow-card:hover {
-    box-shadow: 0 0 15px #33ccff;
-    transform: scale(1.05);
+.card-content:hover {
+  transform: translateY(-5px) scale(1.05);
+  box-shadow: 0 8px 16px rgba(51, 204, 255, 0.4);
 }
 
 .animated-progress {
