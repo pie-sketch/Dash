@@ -69,7 +69,7 @@ def generate_status_block(pool_df):
             time_taken = None
             duration_str = "-"
 
-        # Late logic
+        # Late logic (slow finish)
         overdue = False
         late_reason = ""
         tooltip_calc = None
@@ -84,15 +84,34 @@ def generate_status_block(pool_df):
                     f"Got: {int(actual_duration)} min"
                 )
 
+        # Late start pool logic (≥5 mins after pool up)
+        late_start_pool = False
+        late_start_minutes = None
+        late_start_reason = ""
+        if pd.notna(row["Start Time"]) and pool_up_time:
+            join_delay = (row["Start Time"] - pool_up_time).total_seconds() / 60
+            if join_delay >= 5:
+                late_start_pool = True
+                late_start_minutes = int(join_delay)
+                late_start_reason = f"Started pool {late_start_minutes} min late"
+
+        # Combine all late reasons
+        combined_late_reason = "\n".join(filter(None, [late_reason, late_start_reason]))
+
+        # Class setup
         box_class = "card-content glow-card"
         progress_wrapper_class = ""
+        name_class = "staff-name"
+
         if status == "In Progress":
             progress_wrapper_class = "animated-progress"
         if overdue:
             progress_wrapper_class = "animated-late"
             box_class += " overdue-box"
+        if late_start_pool:
+            name_class += " late-start-name glow-name"
 
-        # ✅ Wrap Progress with tooltip-compatible html.Div
+        # Progress bar component
         progress_component = html.Div(
             dbc.Progress(
                 value=load_percent,
@@ -106,14 +125,13 @@ def generate_status_block(pool_df):
 
         visual_rows.append(
             html.Div([
-                html.Div(name, className="staff-name"),
+                html.Div(name, className=name_class),
                 progress_component,
                 html.Div(load_display, className="load-display"),
                 html.Div(duration_str, className="duration-display"),
-                html.Div(late_reason, className="late-reason") if late_reason else None
-            ], className=box_class, title=tooltip_calc if tooltip_calc else None)  # ✅ HERE
+                html.Div(combined_late_reason, className="late-reason") if combined_late_reason else None
+            ], className=box_class, title=tooltip_calc if tooltip_calc else None)
         )
-
 
     return dbc.Card([
         dbc.CardHeader([
@@ -124,7 +142,8 @@ def generate_status_block(pool_df):
                 html.Div([
                     html.Span("🟢 Complete", className="complete"),
                     html.Span("  🟠 In Progress", className="in-progress"),
-                    html.Span("  🔴 Late", className="late")
+                    html.Span("  🔴 Late", className="late"),
+                    html.Span("  🟡 Late Join", className="late-join")
                 ], className="pool-status"),
                 html.Div([
                     html.Span(f"Total Count: {total_count}", style={"marginRight": "12px"}),
@@ -137,6 +156,7 @@ def generate_status_block(pool_df):
             html.Div(visual_rows, className="seat-grid", style={"padding": "10px"})
         )
     ], className="mb-4", style={"backgroundColor": "#0d1b2a", "borderRadius": "15px"})
+
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
 app.title = "Live Pool Dashboard"
