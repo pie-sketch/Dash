@@ -111,8 +111,9 @@ def generate_status_block(pool_df):
                 html.Div(load_display, className="load-display"),
                 html.Div(duration_str, className="duration-display"),
                 html.Div(late_reason, className="late-reason") if late_reason else None
-            ], className=box_class)
+            ], className=box_class, title=tooltip_calc if tooltip_calc else None)  # ✅ HERE
         )
+
 
     return dbc.Card([
         dbc.CardHeader([
