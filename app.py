@@ -5,7 +5,6 @@ import pandas as pd
 from datetime import datetime, timedelta
 import os
 
-# --- Google Sheet CSV ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1LltJKL6wsXQt_6Qv3rwjfL9StACcMHsNQ2C_wTKw_iw/export?format=csv&gid=0"
 
 def load_data():
@@ -80,29 +79,34 @@ def generate_status_block(pool_df):
                 overdue = True
                 late_reason = f"Expected ≤ {int(expected_duration)}min, got {int(actual_duration)}min"
 
-        card_class = "seat-card glow-card"
+        box_class = "card-content glow-card"
+        progress_wrapper_class = ""
+        if status == "In Progress":
+            progress_wrapper_class = "animated-progress"
         if overdue:
-            card_class += " overdue-box"
+            progress_wrapper_class = "animated-late"
+            box_class += " overdue-box"
 
+        # ✅ Wrap Progress with tooltip-compatible html.Div
         progress_component = html.Div(
             dbc.Progress(
                 value=load_percent,
                 color=color,
                 striped=(status == "In Progress"),
-                style={"height": "10px", "width": "100%"}
+                style={"height": "16px", "width": "100%"}
             ),
             title=late_reason if late_reason else None,
-            className="progress-wrapper"
+            className=progress_wrapper_class
         )
 
         visual_rows.append(
             html.Div([
-                html.Div(name, className="seat-name"),
-                html.Div(load_display, className="seat-load"),
+                html.Div(name, className="staff-name"),
                 progress_component,
-                html.Div(duration_str, className="seat-duration"),
+                html.Div(load_display, className="load-display"),
+                html.Div(duration_str, className="duration-display"),
                 html.Div(late_reason, className="late-reason") if late_reason else None
-            ], className=card_class)
+            ], className=box_class)
         )
 
     return dbc.Card([
@@ -113,8 +117,8 @@ def generate_status_block(pool_df):
                 html.Div(f"⬆ Pool Up: {pool_up}", className="pool-time"),
                 html.Div([
                     html.Span("🟢 Complete", className="complete"),
-                    html.Span("  🔶 In Progress", className="in-progress"),
-                    html.Span("  🔴 Late", className="late")
+                    html.Span("  🔶 In Progress", className="in-progress"),
+                    html.Span("  🔴 Late", className="late")
                 ], className="pool-status"),
                 html.Div([
                     html.Span(f"Total Count: {total_count}", style={"marginRight": "12px"}),
@@ -124,12 +128,10 @@ def generate_status_block(pool_df):
             ], className="pool-header")
         ]),
         dbc.CardBody(
-            html.Div(visual_rows, className="seat-grid")
+            html.Div(visual_rows, className="seat-grid", style={"padding": "10px"})
         )
     ], className="mb-4", style={"backgroundColor": "#0d1b2a", "borderRadius": "15px"})
 
-
-# Initialize Dash
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
 app.title = "Live Pool Dashboard"
 
@@ -146,7 +148,6 @@ app.layout = dbc.Container([
     dbc.Collapse(id="previous-pools", is_open=False)
 ], fluid=True, style={"background-color": "#0d1b2a", "padding": "1rem"})
 
-# Track last update
 last_updated_timestamp = datetime.now()
 
 @app.callback(
