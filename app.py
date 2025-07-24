@@ -89,20 +89,13 @@ def generate_status_block(pool_df):
         late_start_minutes = None
         late_start_reason = ""
         
-        special_tabs = [
-            ("PoolMaster_2025", "WORKPAGE 1", "10-DAY"),
-            ("PoolMaster_2025", "WORKPAGE 1", "3-DAY"),
-            ("PoolMaster_2025", "WORKPAGE 1", "6PM-NIGHT"),
-            ("PoolMaster_2025", "WORKPAGE 1", "10PM-NIGHT")
-        ]
-        
-        # Check if current pool is a special one (use Pool Name and Tab to match)
-        is_special_pool = any(
-            row["Pool Name"].startswith(name_prefix) and row["Tab"] == tab and name_suffix in row["Pool Name"]
-            for name_prefix, tab, name_suffix in special_tabs
+        special_suffixes = ["(10-DAY)", "(3-DAY)", "(6PM-NIGHT)", "(10PM-NIGHT)"]
+        is_special_pool = (
+            row["Pool Name"].startswith("PoolMaster_2025") and
+            any(suffix in row["Pool Name"] for suffix in special_suffixes) and
+            row["Tab"] == "WORKPAGE 1"
         )
         
-        # Determine join_delay based on which rule applies
         if pd.notna(row["Start Time"]):
             if is_special_pool and pd.notna(pool_up_time):
                 # Case 1: Special pool — use Pool Up
@@ -115,19 +108,18 @@ def generate_status_block(pool_df):
                 # Case 2: Other pools — use previous pool's Expected Completion + 5 min
                 all_pools_with_up = pool_df[pool_df["Pool Up"].notna()]
                 if not all_pools_with_up.empty and pd.notna(pool_up_time):
-                    # Estimate previous pool expected completion
                     sorted_prev = all_pools_with_up[all_pools_with_up["Pool Up"] < pool_up_time]
                     if not sorted_prev.empty:
                         last_pool_up = sorted_prev["Pool Up"].max()
                         last_pool_row = sorted_prev[sorted_prev["Pool Up"] == last_pool_up]
                         last_pool_load = last_pool_row["Load"].max()
-                        prev_expected_end = last_pool_up + timedelta(minutes=(last_pool_load / 2.5) + 5 + 5)  # +5 buffer
+                        prev_expected_end = last_pool_up + timedelta(minutes=(last_pool_load / 2.5) + 5 + 5)
                         join_delay = (row["Start Time"] - prev_expected_end).total_seconds() / 60
                         if join_delay >= 0:
                             late_start_pool = True
                             late_start_minutes = int(join_delay)
                             late_start_reason = f"Started pool {late_start_minutes} min late (based on Prev Pool ETA)"
-        )
+
 
 
         # Combine all late reasons
