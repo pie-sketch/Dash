@@ -1,76 +1,102 @@
-/* ✅ Circular Carousel Container */
-.pool-progress-carousel {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: center;
-    gap: 14px;
-    margin: 20px auto;
-    padding: 10px;
-    max-width: 100%;
-    flex-direction: row;
-    flex-wrap: wrap;
-}
-
-/* 🎯 Date Centerpiece (Optional) */
-.pool-carousel-date {
-    font-size: 1rem;
-    font-weight: bold;
-    color: #ffffff;
-    margin: 10px auto;
-    text-align: center;
-    padding: 5px 15px;
-    border: 1px solid #555;
+/* ✨ Base Card Effects */
+.card-content {
+    background-color: #1e293b;
     border-radius: 12px;
-    background: #14213d;
-}
-
-/* 📦 Pool Progress Card Circular */
-.pool-progress-card {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    text-align: center;
     padding: 8px;
-    font-size: 0.7rem;
+    margin-bottom: 10px;
+    color: white;
+    font-size: 0.8rem;
+}
+
+.glow-card {
+    box-shadow: 0 0 8px rgba(0, 255, 255, 0.2);
+    transition: box-shadow 0.3s ease-in-out;
+}
+
+.glow-card:hover {
+    box-shadow: 0 0 12px rgba(0, 255, 255, 0.5);
+}
+
+.overdue-box {
+    border: 1px solid #ff4d4d;
+}
+
+/* ⏳ Countdown Glow */
+.countdown-glow {
+    color: #ffffff;
+    text-shadow: 0 0 5px #33ccff;
+}
+
+/* 👤 Staff Layout */
+.staff-name {
     font-weight: bold;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
-    transition: transform 0.3s, box-shadow 0.3s;
+    margin-bottom: 3px;
 }
 
-/* ✨ Glow on Hover */
-.pool-progress-card:hover {
-    box-shadow: 0 0 20px #33ccff;
-    transform: scale(1.1);
+.load-display,
+.duration-display,
+.late-reason {
+    font-size: 0.65rem;
+    color: #ccc;
 }
 
-/* 🟢 Complete */
-.pool-complete {
-    background-color: #c8facc;
-    color: #225522;
-}
-
-/* 🟠 In Progress */
-.pool-inprogress {
-    background-color: #ffe5b4;
-    color: #aa5500;
-}
-
-/* 🟡 Not Started */
-.pool-notstarted {
-    background-color: #fff7c2;
-    color: #666000;
-}
-
-/* 🔁 Responsive circular style */
+/* ⏰ Late Text Display (Mobile-friendly) */
 @media (max-width: 768px) {
-    .pool-progress-card {
-        width: 80px;
-        height: 80px;
+    .card-content[title]:after {
+        content: attr(title);
+        display: block;
         font-size: 0.65rem;
+        color: #ff9999;
+        text-align: center;
+        margin-top: 5px;
+        font-style: italic;
+        white-space: pre-line;
     }
+}
+
+/* 🔄 Status Colors */
+.pool-status span {
+    margin-right: 8px;
+    font-size: 0.75rem;
+}
+
+.pool-header .tl-name {
+    font-weight: bold;
+    font-size: 1rem;
+    color: gold;
+}
+
+.pool-title {
+    color: white;
+    font-size: 0.9rem;
+}
+
+.pool-time {
+    color: lightgray;
+    font-size: 0.8rem;
+}
+
+.pool-info-box {
+    font-size: 0.75rem;
+    margin-top: 5px;
+}
+
+/* 🧩 Progress Animations */
+.animated-progress {
+    animation: pulse 2s infinite;
+}
+
+.animated-late {
+    animation: blink 1s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
 }
