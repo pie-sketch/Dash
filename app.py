@@ -72,12 +72,17 @@ def generate_status_block(pool_df):
         # Late logic
         overdue = False
         late_reason = ""
+        tooltip_calc = None
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]) and load > 0:
             actual_duration = (row["End Time"] - row["Start Time"]).total_seconds() / 60
             expected_duration = (load / 2.5) + 5  # minutes
             if actual_duration > expected_duration:
                 overdue = True
                 late_reason = f"Expected ≤ {int(expected_duration)}min, got {int(actual_duration)}min"
+                tooltip_calc = (
+                    f"Expected = {int(load)} ÷ 2.5 (load/min) + 5 min (buffer) → {int(expected_duration)} min\n"
+                    f"Got: {int(actual_duration)} min"
+                )
 
         box_class = "card-content glow-card"
         progress_wrapper_class = ""
@@ -95,7 +100,7 @@ def generate_status_block(pool_df):
                 striped=(status == "In Progress"),
                 style={"height": "16px", "width": "100%"}
             ),
-            title=late_reason if late_reason else None,
+            title=tooltip_calc if tooltip_calc else None,
             className=progress_wrapper_class
         )
 
