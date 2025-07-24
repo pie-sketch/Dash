@@ -5,6 +5,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 import os
 
+# --- Google Sheet CSV ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1LltJKL6wsXQt_6Qv3rwjfL9StACcMHsNQ2C_wTKw_iw/export?format=csv&gid=0"
 
 def load_data():
@@ -61,7 +62,6 @@ def generate_status_block(pool_df):
         load_percent = min(100, int((load / target_load) * 100)) if target_load else 0
         load_display = f"{int(load)}"
 
-        # Duration display
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]):
             time_taken = row["End Time"] - row["Start Time"]
             duration_str = str(time_taken).replace("0 days ", "").split(".")[0]
@@ -69,12 +69,11 @@ def generate_status_block(pool_df):
             time_taken = None
             duration_str = "-"
 
-        # Late logic
         overdue = False
         late_reason = ""
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]) and load > 0:
             actual_duration = (row["End Time"] - row["Start Time"]).total_seconds() / 60
-            expected_duration = (load / 2.5) + 5  # minutes
+            expected_duration = (load / 2.5) + 5
             if actual_duration > expected_duration:
                 overdue = True
                 late_reason = f"Expected ≤ {int(expected_duration)}min, got {int(actual_duration)}min"
@@ -87,7 +86,6 @@ def generate_status_block(pool_df):
             progress_wrapper_class = "animated-late"
             box_class += " overdue-box"
 
-        # ✅ Wrap Progress with tooltip-compatible html.Div
         progress_component = html.Div(
             dbc.Progress(
                 value=load_percent,
@@ -132,6 +130,7 @@ def generate_status_block(pool_df):
         )
     ], className="mb-4", style={"backgroundColor": "#0d1b2a", "borderRadius": "15px"})
 
+# Initialize Dash
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
 app.title = "Live Pool Dashboard"
 
@@ -148,6 +147,7 @@ app.layout = dbc.Container([
     dbc.Collapse(id="previous-pools", is_open=False)
 ], fluid=True, style={"background-color": "#0d1b2a", "padding": "1rem"})
 
+# Track last update
 last_updated_timestamp = datetime.now()
 
 @app.callback(
