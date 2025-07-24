@@ -1,72 +1,175 @@
-/* 🎬 Cinema Seat Grid */
-.seat-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 10px;
-}
-
-/* 🎫 Individual Seat Card */
-.seat-card {
-    background-color: #1e293b;
-    border-radius: 10px;
-    padding: 8px;
-    color: white;
-    font-size: 0.75rem;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    box-shadow: 0 0 6px rgba(0, 255, 255, 0.2);
-    transition: box-shadow 0.3s ease-in-out;
-}
-
-.seat-card:hover {
-    box-shadow: 0 0 12px rgba(0, 255, 255, 0.4);
-}
-
-/* 👤 Name + Load */
-.seat-name {
+/* Staff Name */
+.staff-name {
     font-weight: bold;
-    font-size: 0.85rem;
-    margin-bottom: 4px;
+    font-size: 0.8rem;
+    text-align: center;
 }
 
-.seat-load {
+/* Load Display */
+.load-display {
     font-size: 0.75rem;
-    color: #ccc;
-    margin-bottom: 4px;
-}
-
-.seat-duration {
-    font-size: 0.65rem;
-    color: #bbb;
+    text-align: center;
     margin-top: 4px;
 }
 
-/* 🔴 Late reason */
-.late-reason {
-    font-size: 0.6rem;
-    color: #ff9999;
+/* Duration Display */
+.duration-display {
+    font-size: 0.7rem;
+    text-align: center;
     margin-top: 2px;
+    color: #aaa;
+}
+
+/* Late Reason (mobile friendly) */
+.late-reason {
+    font-size: 0.65rem;
+    text-align: center;
+    color: #ff6666;
+    margin-top: 3px;
     font-style: italic;
-    white-space: pre-line;
 }
 
-/* 🔁 Responsive for mobile */
+/* Card visuals */
+.card-content {
+    background-color: #1a2639;
+    padding: 10px;
+    border-radius: 10px;
+    width: 90px;
+    min-height: 80px;
+    text-align: center;
+    transition: transform 0.3s ease;
+}
+
+.glow-card:hover {
+    box-shadow: 0 0 15px #33ccff;
+    transform: scale(1.05);
+}
+
+.animated-progress {
+    background: repeating-linear-gradient(45deg, #ffa500 0, #ffa500 10px, #ffcc80 10px, #ffcc80 20px);
+    background-size: 200% 200%;
+    animation: moveStripes 2s linear infinite;
+}
+
+.animated-late {
+    background: repeating-linear-gradient(45deg, #ff4444 0, #ff4444 10px, #ff9999 10px, #ff9999 20px);
+    background-size: 200% 200%;
+    animation: moveStripes 1.5s linear infinite;
+}
+
+@keyframes moveStripes {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 100% 100%; }
+}
+
+.overdue-box {
+    background-color: #3b0d0d !important;
+    border: 1px solid red;
+}
+
+/* Grid Layout */
+.seat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 10px;
+    justify-items: center;
+}
+
+/* Header styles */
+.tl-name {
+    font-size: 1.6rem;
+    font-weight: bold;
+    color: gold;
+    text-align: center;
+}
+
+.pool-title {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: white;
+    text-align: center;
+}
+
+.pool-time {
+    font-size: 0.95rem;
+    color: #999;
+    text-align: center;
+}
+
+.pool-status {
+    font-size: 0.95rem;
+    margin-top: 4px;
+    text-align: center;
+}
+
+.pool-status span {
+    margin-right: 10px;
+}
+
+.pool-status .complete { color: #00ff88; }
+.pool-status .in-progress { color: orange; }
+.pool-status .late { color: red; }
+
+.pool-info-box {
+    font-size: 0.8rem;
+    color: #ccc;
+    text-align: center;
+    margin-top: 6px;
+}
+
+/* Background */
+body, html {
+    background-color: #0d1b2a !important;
+}
+
+/* ✨ Mobile-friendly Late Reason Visibility */
 @media (max-width: 768px) {
-    .seat-grid {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    }
-
-    .seat-name {
-        font-size: 0.75rem;
-    }
-
-    .seat-card {
-        font-size: 0.7rem;
-    }
-
-    .seat-duration, .late-reason {
-        font-size: 0.6rem;
+    .card-content[title]:after {
+        content: attr(title);
+        display: block;
+        font-size: 0.65rem;
+        color: #ff9999;
+        text-align: center;
+        margin-top: 5px;
+        font-style: italic;
+        white-space: pre-line;
     }
 }
+
+/* ✅ Unify font sizes for TL, Pool Title, Time, Status line, and Info Box */
+.pool-header .tl-name,
+.pool-header .pool-title,
+.pool-header .pool-time,
+.pool-header .pool-status,
+.pool-header .pool-info-box {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #e0e0e0;
+}
+
+.pool-status .complete {
+    color: #00ff88;
+    animation: pulseGreen 2s infinite;
+}
+.pool-status .in-progress {
+    color: orange;
+    animation: pulseOrange 2s infinite;
+}
+.pool-status .late {
+    color: red;
+    animation: pulseRed 2s infinite;
+}
+
+@keyframes pulseGreen {
+    0%, 100% { text-shadow: 0 0 6px #00ff88; transform: scale(1); }
+    50% { text-shadow: 0 0 12px #00ff88; transform: scale(1.08); }
+}
+@keyframes pulseOrange {
+    0%, 100% { text-shadow: 0 0 6px orange; transform: scale(1); }
+    50% { text-shadow: 0 0 12px orange; transform: scale(1.08); }
+}
+@keyframes pulseRed {
+    0%, 100% { text-shadow: 0 0 6px red; transform: scale(1); }
+    50% { text-shadow: 0 0 12px red; transform: scale(1.08); }
+}
+
