@@ -62,6 +62,7 @@ def generate_status_block(pool_df):
         load_percent = min(100, int((load / target_load) * 100)) if target_load else 0
         load_display = f"{int(load)}"
 
+        # Duration display
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]):
             time_taken = row["End Time"] - row["Start Time"]
             duration_str = str(time_taken).replace("0 days ", "").split(".")[0]
@@ -69,42 +70,39 @@ def generate_status_block(pool_df):
             time_taken = None
             duration_str = "-"
 
+        # Late logic
         overdue = False
         late_reason = ""
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]) and load > 0:
             actual_duration = (row["End Time"] - row["Start Time"]).total_seconds() / 60
-            expected_duration = (load / 2.5) + 5
+            expected_duration = (load / 2.5) + 5  # minutes
             if actual_duration > expected_duration:
                 overdue = True
                 late_reason = f"Expected ≤ {int(expected_duration)}min, got {int(actual_duration)}min"
 
-        box_class = "card-content glow-card"
-        progress_wrapper_class = ""
-        if status == "In Progress":
-            progress_wrapper_class = "animated-progress"
+        card_class = "seat-card glow-card"
         if overdue:
-            progress_wrapper_class = "animated-late"
-            box_class += " overdue-box"
+            card_class += " overdue-box"
 
         progress_component = html.Div(
             dbc.Progress(
                 value=load_percent,
                 color=color,
                 striped=(status == "In Progress"),
-                style={"height": "16px", "width": "100%"}
+                style={"height": "10px", "width": "100%"}
             ),
             title=late_reason if late_reason else None,
-            className=progress_wrapper_class
+            className="progress-wrapper"
         )
 
         visual_rows.append(
             html.Div([
-                html.Div(name, className="staff-name"),
+                html.Div(name, className="seat-name"),
+                html.Div(load_display, className="seat-load"),
                 progress_component,
-                html.Div(load_display, className="load-display"),
-                html.Div(duration_str, className="duration-display"),
+                html.Div(duration_str, className="seat-duration"),
                 html.Div(late_reason, className="late-reason") if late_reason else None
-            ], className=box_class)
+            ], className=card_class)
         )
 
     return dbc.Card([
@@ -126,9 +124,10 @@ def generate_status_block(pool_df):
             ], className="pool-header")
         ]),
         dbc.CardBody(
-            html.Div(visual_rows, className="seat-grid", style={"padding": "10px"})
+            html.Div(visual_rows, className="seat-grid")
         )
     ], className="mb-4", style={"backgroundColor": "#0d1b2a", "borderRadius": "15px"})
+
 
 # Initialize Dash
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
