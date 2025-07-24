@@ -102,7 +102,7 @@ def generate_status_block(pool_df):
                 join_delay = (row["Start Time"] - pool_up_time).total_seconds() / 60
                 if join_delay >= 5:
                     late_start_pool = True
-                    late_start_minutes = int(join_delay)
+                    late_start_minutes = int(join_delay - 5)
                     late_start_reason = f"Started pool {late_start_minutes} min late (based on Pool Up)"
             else:
                 # Case 2: Other pools — use previous pool's Expected Completion + 5 min
@@ -111,14 +111,13 @@ def generate_status_block(pool_df):
                     sorted_prev = all_pools_with_up[all_pools_with_up["Pool Up"] < pool_up_time]
                     if not sorted_prev.empty:
                         last_pool_up = sorted_prev["Pool Up"].max()
-                        last_pool_row = sorted_prev[sorted_prev["Pool Up"] == last_pool_up]
-                        last_pool_load = last_pool_row["Load"].max()
-                        prev_expected_end = last_pool_up + timedelta(minutes=(last_pool_load / 2.5) + 5 + 5)
-                        join_delay = (row["Start Time"] - prev_expected_end).total_seconds() / 60
+                        prev_expected_start = last_pool_up + timedelta(minutes=65)  # 60 min + 5 buffer
+                        join_delay = (row["Start Time"] - prev_expected_start).total_seconds() / 60
                         if join_delay >= 0:
                             late_start_pool = True
                             late_start_minutes = int(join_delay)
-                            late_start_reason = f"Started pool {late_start_minutes} min late (based on Prev Pool ETA)"
+                            late_start_reason = f"Started pool {late_start_minutes} min late (based on Prev Pool Start +65min)"
+
 
 
 
