@@ -146,7 +146,7 @@ app.layout = dbc.Container([
         dbc.Col(html.Div(id="last-update", className="text-start text-secondary", style={"font-size": "0.75rem"}), width=6),
         dbc.Col(html.Div(id="countdown-timer", className="text-end countdown-glow", style={"font-size": "0.75rem"}), width=6)
     ], align="center"),
-    dcc.Interval(id="auto-refresh", interval=180000, n_intervals=0),
+    dcc.Interval(id="auto-refresh", interval=30000, n_intervals=0),
     dcc.Interval(id="countdown-interval", interval=1000, n_intervals=0),
     html.Div(id="current-pool"),
     html.Hr(className="bg-light"),
@@ -186,7 +186,7 @@ def update_dashboard(n):
 def update_countdown(n):
     global last_updated_timestamp
     elapsed = (datetime.now() - last_updated_timestamp).seconds
-    remaining = max(0, 180 - elapsed)
+    remaining = max(0, 30 - elapsed)  # ⏱ 30-second countdown
     return f"\u23F3 Refreshing in: {remaining:02d}s"
 
 @app.callback(
