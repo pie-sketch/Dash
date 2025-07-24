@@ -143,7 +143,7 @@ def generate_status_block(pool_df):
                     html.Span("🟢 Complete", className="complete"),
                     html.Span("  🟠 In Progress", className="in-progress"),
                     html.Span("  🔴 Late", className="late"),
-                    html.Span("  🟡 Late Join", className="late-join")
+                    html.Span("  🟡 Late Start", className="late-join")
                 ], className="pool-status"),
                 html.Div([
                     html.Span(f"Total Count: {total_count}", style={"marginRight": "12px"}),
