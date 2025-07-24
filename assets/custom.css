@@ -160,6 +160,18 @@ body, html {
     animation: pulseRed 2s infinite;
 }
 
+/* Legend text style */
+.pool-status span {
+  font-size: 0.75rem;
+  margin-right: 12px;
+}
+
+/* Color for 🟡 Late Join */
+.late-join {
+  color: #f5e663;
+  font-weight: 500;
+}
+
 @keyframes pulseGreen {
     0%, 100% { text-shadow: 0 0 6px #00ff88; transform: scale(1); }
     50% { text-shadow: 0 0 12px #00ff88; transform: scale(1.08); }
