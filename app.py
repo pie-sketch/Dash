@@ -135,13 +135,12 @@ def generate_status_block(pool_df):
                     ], className="card-front"),
                     html.Div([
                         html.Div(f"Start: {row['Start Time'].strftime('%H:%M:%S') if pd.notna(row['Start Time']) else '-'}"),
-                        html.Div(f"Expected ≤ {int(expected_duration)}min, got {int(actual_duration)}min") if late_reason else None,
-                        html.Div(late_start_reason) if late_start_reason else None
+                        html.Div(f"Load: {int(load)}"),
+                        html.Div(status),
                     ], className="card-back"),
                 ], className="card-inner"),
             ], className=box_class)
         )
-
 
 
     return dbc.Card([
