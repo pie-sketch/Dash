@@ -1,3 +1,12 @@
+.pool-header .tl-name,
+.pool-header .pool-title,
+.pool-header .pool-time {
+    font-size: 0.85rem;  /* ✅ Match this with pool-info-box */
+    font-weight: 500;
+    color: #e0e0e0;
+}
+
+
 /* 🔁 Card Container */
 .card-content {
   background-color: #1a2639;
