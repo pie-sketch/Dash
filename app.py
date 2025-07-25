@@ -32,48 +32,64 @@ def get_status(row, pool_df):
         return "Complete", "success", ""
     return "In Progress", "warning", ""
 
-def generate_status_block(pool_df):
+# --- Utility: Detect if a pool is 'Special' ---
+special_pool_criteria = [
+    ("(10-DAY)", "WORKPAGE 1"),
+    ("(3-DAY)", "WORKPAGE 1"),
+    ("(6PM-NIGHT)", "WORKPAGE 1"),
+    ("(10PM-NIGHT)", "WORKPAGE 1"),
+]
+
+def is_special(pool_name, tab):
+    return any(suffix in pool_name and tab == exact_tab for suffix, exact_tab in special_pool_criteria)
+
+def generate_status_block(pool_df, full_df):
     tl_row = pool_df[pool_df["Pool Up"].notna()]
     if not tl_row.empty:
         tl = tl_row.iloc[0]
         pool_name = tl["Pool Name"]
         tab = tl["Tab"]
         pool_up_time = tl["Pool Up"]
-        pool_up = pool_up_time.strftime("%d/%m/%Y %H:%M:%S")
         tl_name = tl["Name"]
         total_count = int(tl["Load"]) if "Load" in tl else 0
+        this_pool_id = tl["Pool ID"]
     else:
-        pool_name, tab, pool_up, tl_name = "-", "-", "-", "-"
+        pool_name, tab, pool_up_time, tl_name = "-", "-", None, "-"
         total_count = 0
-        pool_up_time = None
+        this_pool_id = "-"
 
+    is_special_pool = is_special(pool_name, tab)
+
+    # ✅ ETA Calculation
+    expected_time = None
+    if pd.notna(pool_up_time):
+        if is_special_pool:
+            expected_time = pool_up_time + timedelta(minutes=70)
+        else:
+            all_pools = full_df[full_df["Pool Up"].notna()].drop_duplicates("Pool ID")
+            all_pools = all_pools.sort_values("Pool Up").reset_index(drop=True)
+
+            eta_chain = {}
+            for i, row in all_pools.iterrows():
+                pid = row["Pool ID"]
+                name = row["Pool Name"]
+                tab_ = row["Tab"]
+                up_time = row["Pool Up"]
+                pool_is_special = is_special(name, tab_)
+
+                if pool_is_special or i == 0:
+                    eta_chain[pid] = up_time + timedelta(minutes=70)
+                else:
+                    prev_pid = all_pools.iloc[i - 1]["Pool ID"]
+                    eta_chain[pid] = eta_chain[prev_pid] + timedelta(minutes=70)
+
+            expected_time = eta_chain.get(this_pool_id, pool_up_time + timedelta(minutes=70))
+
+    # 🧮 Continue with the visual block
     active_rows = pool_df[(pool_df["Pool Up"].isna()) & (pool_df["Load"] > 0)].copy()
     total_load = tl_row["Load"].max() if not tl_row.empty else 0
     manpower = len(active_rows)
     target_load = total_load / manpower if manpower else 1
-    # Pool ETA Done logic
-    special_suffixes = ["(10-DAY)", "(3-DAY)", "(6PM-NIGHT)", "(10PM-NIGHT)"]
-    is_special_pool = (
-        pool_name.startswith("PoolMaster_2025") and
-        any(suffix in pool_name for suffix in special_suffixes) and
-        tab == "WORKPAGE 1"
-    )
-    
-    expected_time = None
-    if pd.notna(pool_up_time):
-        if is_special_pool:
-            # Special Pool ETA = Pool Up + 70 min
-            expected_time = pool_up_time + timedelta(minutes=70)
-        else:
-            # Regular pool — based on previous ETA
-            all_pools_with_up = pool_df[pool_df["Pool Up"].notna()]
-            sorted_prev = all_pools_with_up[all_pools_with_up["Pool Up"] < pool_up_time]
-            if not sorted_prev.empty:
-                last_pool_up = sorted_prev["Pool Up"].max()
-                expected_time = last_pool_up + timedelta(minutes=70 + 60)  # +60 for 1h work + 10 buffer
-            else:
-                expected_time = pool_up_time + timedelta(minutes=70)
-
 
     visual_rows = []
     for _, row in active_rows.iterrows():
@@ -88,16 +104,15 @@ def generate_status_block(pool_df):
             time_taken = row["End Time"] - row["Start Time"]
             duration_str = str(time_taken).replace("0 days ", "").split(".")[0]
         else:
-            time_taken = None
             duration_str = "-"
 
-        # Late logic (slow finish)
+        # Late logic
         overdue = False
         late_reason = ""
         tooltip_calc = None
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]) and load > 0:
             actual_duration = (row["End Time"] - row["Start Time"]).total_seconds() / 60
-            expected_duration = (load / 2.5) + 5  # minutes
+            expected_duration = (load / 2.5) + 5
             if actual_duration > expected_duration:
                 overdue = True
                 late_reason = f"Expected ≤ {int(expected_duration)}min, got {int(actual_duration)}min"
@@ -106,47 +121,32 @@ def generate_status_block(pool_df):
                     f"Got: {int(actual_duration)} min"
                 )
 
-        # Late start logic - customized rules
+        # Late start logic
         late_start_pool = False
         late_start_minutes = None
         late_start_reason = ""
-        
-        special_suffixes = ["(10-DAY)", "(3-DAY)", "(6PM-NIGHT)", "(10PM-NIGHT)"]
-        is_special_pool = (
-            row["Pool Name"].startswith("PoolMaster_2025") and
-            any(suffix in row["Pool Name"] for suffix in special_suffixes) and
-            row["Tab"] == "WORKPAGE 1"
-        )
-        
         if pd.notna(row["Start Time"]):
             if is_special_pool and pd.notna(pool_up_time):
-                # Case 1: Special pool — use Pool Up
                 join_delay = (row["Start Time"] - pool_up_time).total_seconds() / 60
                 if join_delay >= 5:
                     late_start_pool = True
                     late_start_minutes = int(join_delay - 5)
                     late_start_reason = f"Started pool {late_start_minutes} min late (based on Pool Up)"
             else:
-                # Case 2: Other pools — use previous pool's Expected Completion + 5 min
-                all_pools_with_up = pool_df[pool_df["Pool Up"].notna()]
+                all_pools_with_up = full_df[full_df["Pool Up"].notna()]
                 if not all_pools_with_up.empty and pd.notna(pool_up_time):
                     sorted_prev = all_pools_with_up[all_pools_with_up["Pool Up"] < pool_up_time]
                     if not sorted_prev.empty:
                         last_pool_up = sorted_prev["Pool Up"].max()
-                        prev_expected_start = last_pool_up + timedelta(minutes=65)  # 60 min + 5 buffer
+                        prev_expected_start = last_pool_up + timedelta(minutes=65)
                         join_delay = (row["Start Time"] - prev_expected_start).total_seconds() / 60
                         if join_delay >= 0:
                             late_start_pool = True
                             late_start_minutes = int(join_delay)
                             late_start_reason = f"Started pool {late_start_minutes} min late (based on Prev Pool Start +65min)"
 
-
-
-
-        # Combine all late reasons
         combined_late_reason = "\n".join(filter(None, [late_reason, late_start_reason]))
 
-        # Class setup
         box_class = "card-content glow-card"
         progress_wrapper_class = ""
         name_class = "staff-name"
@@ -159,7 +159,6 @@ def generate_status_block(pool_df):
         if late_start_pool:
             name_class += " late-start-name glow-name"
 
-        # Progress bar component
         progress_component = html.Div(
             dbc.Progress(
                 value=load_percent,
@@ -186,7 +185,7 @@ def generate_status_block(pool_df):
             html.Div([
                 html.Div(f"{tl_name}", className="tl-name"),
                 html.Div(f"{pool_name} - {tab}", className="pool-title"),
-                html.Div(f"⬆ Pool Up: {pool_up}", className="pool-time"),
+                html.Div(f"⬆ Pool Up: {pool_up_time.strftime('%d/%m/%Y %H:%M:%S') if pool_up_time else '-'}", className="pool-time"),
                 html.Div([
                     html.Span("🟢 Complete", className="complete"),
                     html.Span("  🟠 In Progress", className="in-progress"),
@@ -204,6 +203,7 @@ def generate_status_block(pool_df):
             html.Div(visual_rows, className="seat-grid", style={"padding": "10px"})
         )
     ], className="mb-4", style={"backgroundColor": "#0d1b2a", "borderRadius": "15px"})
+
 
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
