@@ -123,28 +123,23 @@ def generate_status_block(pool_df):
             className=progress_wrapper_class
         )
 
-        visual_rows.append(
-            html.Div([
+            visual_rows.append(
                 html.Div([
                     html.Div([
-                        # FRONT
-                        html.Div(name, className=name_class),
-                        progress_component,
-                        html.Div(load_display, className="load-display"),
-                        html.Div(duration_str, className="duration-display"),
-                    ], className="card-front"),
-        
-                    # BACK
-                    html.Div([
-                        html.Div(f"Start: {row['Start Time'].strftime('%H:%M:%S') if pd.notna(row['Start Time']) else '-'}"),
-                        html.Div("⚠️ Late Start", className="label-text") if late_start_pool else None,
-                        html.Div(combined_late_reason, className="late-reason") if combined_late_reason else None,
-                    ], className="card-back"),
-        
-                ], className="card-inner"),
-            ], className=box_class)
-        )
-
+                        html.Div([
+                            html.Div(name, className=name_class),
+                            progress_component,
+                            html.Div(load_display, className="load-display"),
+                            html.Div(duration_str, className="duration-display"),
+                        ], className="card-front"),
+                        html.Div([
+                            html.Div(f"Start: {row['Start Time'].strftime('%H:%M:%S') if pd.notna(row['Start Time']) else '-'}"),
+                            html.Div("⚠️ Late Start", className="label-text") if late_start_pool else None,
+                            html.Div(combined_late_reason, className="late-reason") if combined_late_reason else None,
+                        ], className="card-back"),
+                    ], className="card-inner"),
+                ], className=box_class)
+            )
 
 
     return dbc.Card([
