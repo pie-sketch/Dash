@@ -43,6 +43,16 @@ special_pool_criteria = [
 def is_special(pool_name, tab):
     return any(suffix in pool_name and tab == exact_tab for suffix, exact_tab in special_pool_criteria)
 
+def is_special_pool(pool_name, tab):
+    # Define the exact special pools
+    special_identifiers = [
+        ("(10-DAY)", "WORKPAGE 1"),
+        ("(3-DAY)", "WORKPAGE 1"),
+        ("(6PM-NIGHT)", "WORKPAGE 1"),
+        ("(10PM-NIGHT)", "WORKPAGE 1")
+    ]
+    return any(suffix in pool_name and tab == expected_tab for suffix, expected_tab in special_identifiers)
+
 def generate_status_block(pool_df, full_df):
     tl_row = pool_df[pool_df["Pool Up"].notna()]
     if not tl_row.empty:
@@ -50,47 +60,42 @@ def generate_status_block(pool_df, full_df):
         pool_name = tl["Pool Name"]
         tab = tl["Tab"]
         pool_up_time = tl["Pool Up"]
+        pool_up = pool_up_time.strftime("%d/%m/%Y %H:%M:%S")
         tl_name = tl["Name"]
         total_count = int(tl["Load"]) if "Load" in tl else 0
-        this_pool_id = tl["Pool ID"]
     else:
-        pool_name, tab, pool_up_time, tl_name = "-", "-", None, "-"
+        pool_name, tab, pool_up, tl_name = "-", "-", "-", "-"
         total_count = 0
-        this_pool_id = "-"
+        pool_up_time = None
 
-    is_special_pool = is_special(pool_name, tab)
-
-    # ✅ ETA Calculation
-    expected_time = None
-    if pd.notna(pool_up_time):
-        if is_special_pool:
-            expected_time = pool_up_time + timedelta(minutes=70)
-        else:
-            all_pools = full_df[full_df["Pool Up"].notna()].drop_duplicates("Pool ID")
-            all_pools = all_pools.sort_values("Pool Up").reset_index(drop=True)
-
-            eta_chain = {}
-            for i, row in all_pools.iterrows():
-                pid = row["Pool ID"]
-                name = row["Pool Name"]
-                tab_ = row["Tab"]
-                up_time = row["Pool Up"]
-                pool_is_special = is_special(name, tab_)
-
-                if pool_is_special or i == 0:
-                    eta_chain[pid] = up_time + timedelta(minutes=70)
-                else:
-                    prev_pid = all_pools.iloc[i - 1]["Pool ID"]
-                    eta_chain[pid] = eta_chain[prev_pid] + timedelta(minutes=70)
-
-            expected_time = eta_chain.get(this_pool_id, pool_up_time + timedelta(minutes=70))
-
-    # 🧮 Continue with the visual block
     active_rows = pool_df[(pool_df["Pool Up"].isna()) & (pool_df["Load"] > 0)].copy()
     total_load = tl_row["Load"].max() if not tl_row.empty else 0
     manpower = len(active_rows)
     target_load = total_load / manpower if manpower else 1
 
+    # ✅ ETA Calculation (chained)
+    eta_chain = None
+    if pd.notna(pool_up_time):
+        is_special = is_special_pool(pool_name, tab)
+        if is_special:
+            eta_chain = pool_up_time + timedelta(minutes=70)
+        else:
+            # Search full_df for previous ETA (from earlier pools)
+            all_pools = full_df[full_df["Pool Up"].notna()]
+            sorted_prev = all_pools[all_pools["Pool Up"] < pool_up_time].copy()
+            sorted_prev["Pool ETA"] = sorted_prev.apply(
+                lambda row: (row["Pool Up"] + timedelta(minutes=70)) if is_special_pool(row["Pool Name"], row["Tab"])
+                else pd.NaT,
+                axis=1
+            )
+            sorted_prev = sorted_prev[sorted_prev["Pool ETA"].notna()]
+            if not sorted_prev.empty:
+                last_eta = sorted_prev["Pool ETA"].max()
+                eta_chain = last_eta + timedelta(minutes=70)
+            else:
+                eta_chain = pool_up_time + timedelta(minutes=70)
+
+    # Build staff boxes
     visual_rows = []
     for _, row in active_rows.iterrows():
         name = row["Name"]
@@ -99,14 +104,14 @@ def generate_status_block(pool_df, full_df):
         load_percent = min(100, int((load / target_load) * 100)) if target_load else 0
         load_display = f"{int(load)}"
 
-        # Duration display
+        # Duration
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]):
             time_taken = row["End Time"] - row["Start Time"]
             duration_str = str(time_taken).replace("0 days ", "").split(".")[0]
         else:
             duration_str = "-"
 
-        # Late logic
+        # Late completion
         overdue = False
         late_reason = ""
         tooltip_calc = None
@@ -123,42 +128,34 @@ def generate_status_block(pool_df, full_df):
 
         # Late start logic
         late_start_pool = False
-        late_start_minutes = None
         late_start_reason = ""
         if pd.notna(row["Start Time"]):
-            if is_special_pool and pd.notna(pool_up_time):
+            if is_special_pool(row["Pool Name"], row["Tab"]) and pd.notna(pool_up_time):
                 join_delay = (row["Start Time"] - pool_up_time).total_seconds() / 60
-                if join_delay >= 5:
+                if join_delay >= 10:
                     late_start_pool = True
-                    late_start_minutes = int(join_delay - 5)
-                    late_start_reason = f"Started pool {late_start_minutes} min late (based on Pool Up)"
-            else:
-                all_pools_with_up = full_df[full_df["Pool Up"].notna()]
-                if not all_pools_with_up.empty and pd.notna(pool_up_time):
-                    sorted_prev = all_pools_with_up[all_pools_with_up["Pool Up"] < pool_up_time]
-                    if not sorted_prev.empty:
-                        last_pool_up = sorted_prev["Pool Up"].max()
-                        prev_expected_start = last_pool_up + timedelta(minutes=65)
-                        join_delay = (row["Start Time"] - prev_expected_start).total_seconds() / 60
-                        if join_delay >= 0:
-                            late_start_pool = True
-                            late_start_minutes = int(join_delay)
-                            late_start_reason = f"Started pool {late_start_minutes} min late (based on Prev Pool Start +65min)"
+                    late_start_reason = f"Started pool {int(join_delay - 10)} min late (based on Pool Up)"
+            elif eta_chain:
+                prev_start = eta_chain - timedelta(minutes=70)
+                join_delay = (row["Start Time"] - prev_start).total_seconds() / 60
+                if join_delay >= 0:
+                    late_start_pool = True
+                    late_start_reason = f"Started pool {int(join_delay)} min late (based on Prev ETA +0min)"
 
+        # Combined Late Info
         combined_late_reason = "\n".join(filter(None, [late_reason, late_start_reason]))
 
+        # CSS Classes
         box_class = "card-content glow-card"
-        progress_wrapper_class = ""
+        progress_wrapper_class = "animated-progress" if status == "In Progress" else ""
         name_class = "staff-name"
-
-        if status == "In Progress":
-            progress_wrapper_class = "animated-progress"
         if overdue:
             progress_wrapper_class = "animated-late"
             box_class += " overdue-box"
         if late_start_pool:
             name_class += " late-start-name glow-name"
 
+        # Card
         progress_component = html.Div(
             dbc.Progress(
                 value=load_percent,
@@ -169,7 +166,6 @@ def generate_status_block(pool_df, full_df):
             title=tooltip_calc if tooltip_calc else None,
             className=progress_wrapper_class
         )
-
         visual_rows.append(
             html.Div([
                 html.Div(name, className=name_class),
@@ -185,7 +181,7 @@ def generate_status_block(pool_df, full_df):
             html.Div([
                 html.Div(f"{tl_name}", className="tl-name"),
                 html.Div(f"{pool_name} - {tab}", className="pool-title"),
-                html.Div(f"⬆ Pool Up: {pool_up_time.strftime('%d/%m/%Y %H:%M:%S') if pool_up_time else '-'}", className="pool-time"),
+                html.Div(f"⬆ Pool Up: {pool_up}", className="pool-time"),
                 html.Div([
                     html.Span("🟢 Complete", className="complete"),
                     html.Span("  🟠 In Progress", className="in-progress"),
@@ -195,7 +191,7 @@ def generate_status_block(pool_df, full_df):
                 html.Div([
                     html.Span(f"Total Count: {total_count}", style={"marginRight": "12px"}),
                     html.Span(f"Manpower: {manpower}", style={"marginRight": "12px"}),
-                    html.Span(f"Pool ETA Done: {expected_time.strftime('%H:%M:%S') if expected_time else '-'}")
+                    html.Span(f"Pool ETA Done: {eta_chain.strftime('%H:%M:%S') if eta_chain else '-'}")
                 ], className="pool-info-box")
             ], className="pool-header")
         ]),
@@ -203,6 +199,7 @@ def generate_status_block(pool_df, full_df):
             html.Div(visual_rows, className="seat-grid", style={"padding": "10px"})
         )
     ], className="mb-4", style={"backgroundColor": "#0d1b2a", "borderRadius": "15px"})
+
 
 
 
@@ -239,7 +236,7 @@ def update_dashboard(n):
     pool_groups = pool_groups.sort_values("Pool Up", ascending=False).head(9)
     pool_ids = pool_groups["Pool ID"].tolist()
 
-    pool_blocks = [generate_status_block(df[df["Pool ID"] == pid]) for pid in pool_ids]
+    pool_blocks = [generate_status_block(df[df["Pool ID"] == pid], df) for pid in pool_ids]
     updated_time = last_updated_timestamp.strftime("Last updated: %d/%m/%Y %H:%M:%S")
 
     if not pool_blocks:
