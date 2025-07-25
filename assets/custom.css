@@ -1,35 +1,4 @@
-/* Staff Name */
-.staff-name {
-    font-weight: bold;
-    font-size: 0.8rem;
-    text-align: center;
-}
-
-/* Load Display */
-.load-display {
-    font-size: 0.75rem;
-    text-align: center;
-    margin-top: 4px;
-}
-
-/* Duration Display */
-.duration-display {
-    font-size: 0.7rem;
-    text-align: center;
-    margin-top: 2px;
-    color: #aaa;
-}
-
-/* Late Reason (mobile friendly) */
-.late-reason {
-    font-size: 0.65rem;
-    text-align: center;
-    color: #ffffff;  /* white color */
-    margin-top: 3px;
-    font-style: italic;
-}
-
-/* Card visuals */
+/* 🔁 Card Container */
 .card-content {
   background-color: #1a2639;
   padding: 10px;
@@ -38,6 +7,7 @@
   min-height: 80px;
   text-align: center;
   transition: transform 0.3s cubic-bezier(0.25, 1.5, 0.5, 1), box-shadow 0.3s ease;
+  perspective: 1000px;
 }
 
 .card-content:hover {
@@ -45,147 +15,182 @@
   box-shadow: 0 8px 16px rgba(51, 204, 255, 0.4);
 }
 
-.animated-progress {
-    background: repeating-linear-gradient(45deg, #ffa500 0, #ffa500 10px, #ffcc80 10px, #ffcc80 20px);
-    background-size: 200% 200%;
-    animation: moveStripes 2s linear infinite;
+/* 🔁 Card Flip Inner */
+.card-inner {
+  position: relative;
+  width: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.6s;
 }
 
-.animated-late {
-    background: repeating-linear-gradient(45deg, #ff4444 0, #ff4444 10px, #ff9999 10px, #ff9999 20px);
-    background-size: 200% 200%;
-    animation: moveStripes 1.5s linear infinite;
+.card-content:hover .card-inner {
+  transform: rotateY(180deg);
 }
 
-@keyframes moveStripes {
-    0% { background-position: 0% 0%; }
-    100% { background-position: 100% 100%; }
+.card-front,
+.card-back {
+  position: absolute;
+  backface-visibility: hidden;
+  width: 100%;
 }
 
-.overdue-box {
-    background-color: #3b0d0d !important;
-    border: 1px solid red;
+.card-back {
+  transform: rotateY(180deg);
+  background-color: #1b263b;
+  color: #fff;
+  padding: 5px;
+  font-size: 0.7rem;
+  border-radius: 8px;
 }
 
-/* Grid Layout */
+/* 🧑‍💼 Staff Name */
+.staff-name {
+  font-weight: bold;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+/* 🔢 Load Display */
+.load-display {
+  font-size: 0.75rem;
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* ⏱ Duration Display */
+.duration-display {
+  font-size: 0.7rem;
+  text-align: center;
+  margin-top: 2px;
+  color: #aaa;
+}
+
+/* 📱 Late Reason (Mobile-friendly) */
+.late-reason {
+  font-size: 0.65rem;
+  text-align: center;
+  color: #ffffff;
+  margin-top: 3px;
+  font-style: italic;
+}
+
+/* 🧱 Seat Grid Layout */
 .seat-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-    gap: 10px;
-    justify-items: center;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 10px;
+  justify-items: center;
 }
 
-/* Header styles */
+/* 🧑‍💼 TL, Pool Info Header */
 .tl-name {
-    font-size: 1.6rem;
-    font-weight: bold;
-    color: gold;
-    text-align: center;
+  font-size: 1.6rem;
+  font-weight: bold;
+  color: gold;
+  text-align: center;
 }
 
 .pool-title {
-    font-size: 1.1rem;
-    font-weight: 500;
-    color: white;
-    text-align: center;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: white;
+  text-align: center;
 }
 
 .pool-time {
-    font-size: 0.95rem;
-    color: #999;
-    text-align: center;
+  font-size: 0.95rem;
+  color: #999;
+  text-align: center;
 }
 
 .pool-status {
-    font-size: 0.95rem;
-    margin-top: 4px;
-    text-align: center;
+  font-size: 0.95rem;
+  margin-top: 4px;
+  text-align: center;
 }
 
-.pool-status span {
-    margin-right: 10px;
-}
-
-.pool-status .complete { color: #00ff88; }
-.pool-status .in-progress { color: orange; }
-.pool-status .late { color: red; }
-
-.pool-info-box {
-    font-size: 0.8rem;
-    color: #ccc;
-    text-align: center;
-    margin-top: 6px;
-}
-
-/* Background */
-body, html {
-    background-color: #0d1b2a !important;
-}
-
-/* ✨ Mobile-friendly Late Reason Visibility */
-@media (max-width: 768px) {
-    .card-content[title]:after {
-        content: attr(title);
-        display: block;
-        font-size: 0.65rem;
-        color: #ff9999;
-        text-align: center;
-        margin-top: 5px;
-        font-style: italic;
-        white-space: pre-line;
-    }
-}
-
-/* ✅ Unify font sizes for TL, Pool Title, Time, Status line, and Info Box */
-.pool-header .tl-name,
-.pool-header .pool-title,
-.pool-header .pool-time,
-.pool-header .pool-status,
-.pool-header .pool-info-box {
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: #e0e0e0;
-}
-
-.pool-status .complete {
-    color: #00ff88;
-    animation: pulseGreen 2s infinite;
-}
-.pool-status .in-progress {
-    color: orange;
-    animation: pulseOrange 2s infinite;
-}
-.pool-status .late {
-    color: red;
-    animation: pulseRed 2s infinite;
-}
-
-/* Legend text style */
 .pool-status span {
   font-size: 0.75rem;
   margin-right: 12px;
 }
 
-/* Color for 🟡 Late Join */
-.late-start {
+.pool-status .complete {
+  color: #00ff88;
+  animation: pulseGreen 2s infinite;
+}
+
+.pool-status .in-progress {
+  color: orange;
+  animation: pulseOrange 2s infinite;
+}
+
+.pool-status .late {
+  color: red;
+  animation: pulseRed 2s infinite;
+}
+
+.pool-status .late-join {
   color: #f5e663;
   font-weight: 500;
 }
 
-@keyframes pulseGreen {
-    0%, 100% { text-shadow: 0 0 6px #00ff88; transform: scale(1); }
-    50% { text-shadow: 0 0 12px #00ff88; transform: scale(1.08); }
-}
-@keyframes pulseOrange {
-    0%, 100% { text-shadow: 0 0 6px orange; transform: scale(1); }
-    50% { text-shadow: 0 0 12px orange; transform: scale(1.08); }
-}
-@keyframes pulseRed {
-    0%, 100% { text-shadow: 0 0 6px red; transform: scale(1); }
-    50% { text-shadow: 0 0 12px red; transform: scale(1.08); }
+.pool-info-box {
+  font-size: 0.8rem;
+  color: #ccc;
+  text-align: center;
+  margin-top: 6px;
 }
 
-/* Yellow name for late pool starters */
+/* 🌐 Background */
+body, html {
+  background-color: #0d1b2a !important;
+}
+
+/* 🎯 Animation for In Progress */
+.animated-progress {
+  animation: pulseGlow 2s infinite;
+}
+
+/* 🔴 Animation for Late Progress */
+.animated-late {
+  background: repeating-linear-gradient(45deg, #ff4444 0, #ff4444 10px, #ff9999 10px, #ff9999 20px);
+  background-size: 200% 200%;
+  animation: moveStripes 1.5s linear infinite;
+}
+
+@keyframes moveStripes {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 100% 100%; }
+}
+
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 5px rgba(255, 165, 0, 0.2); }
+  50% { box-shadow: 0 0 15px rgba(255, 165, 0, 0.6); }
+  100% { box-shadow: 0 0 5px rgba(255, 165, 0, 0.2); }
+}
+
+@keyframes pulseGreen {
+  0%, 100% { text-shadow: 0 0 6px #00ff88; transform: scale(1); }
+  50% { text-shadow: 0 0 12px #00ff88; transform: scale(1.08); }
+}
+
+@keyframes pulseOrange {
+  0%, 100% { text-shadow: 0 0 6px orange; transform: scale(1); }
+  50% { text-shadow: 0 0 12px orange; transform: scale(1.08); }
+}
+
+@keyframes pulseRed {
+  0%, 100% { text-shadow: 0 0 6px red; transform: scale(1); }
+  50% { text-shadow: 0 0 12px red; transform: scale(1.08); }
+}
+
+/* 🟥 Overdue Card */
+.overdue-box {
+  background-color: #3b0d0d !important;
+  border: 1px solid red;
+}
+
+/* 🌟 Name Glow for Late Start */
 .late-start-name {
   color: #f5e663;
   font-weight: bold;
@@ -201,46 +206,16 @@ body, html {
   100% { text-shadow: 0 0 2px #fff000; }
 }
 
-/* Yellow legend text */
-.late-join {
-  color: #f5e663;
-  font-weight: 500;
-}
-
-/* 🟠 Pulse animation for In Progress */
-.animated-progress {
-  animation: pulseGlow 2s infinite;
-}
-
-@keyframes pulseGlow {
-  0% { box-shadow: 0 0 5px rgba(255, 165, 0, 0.2); }
-  50% { box-shadow: 0 0 15px rgba(255, 165, 0, 0.6); }
-  100% { box-shadow: 0 0 5px rgba(255, 165, 0, 0.2); }
-}
-
-/* 🔁 Card flip */
-.card-content {
-  perspective: 1000px;
-}
-.card-inner {
-  position: relative;
-  width: 100%;
-  transform-style: preserve-3d;
-  transition: transform 0.6s;
-}
-.card-content:hover .card-inner {
-  transform: rotateY(180deg);
-}
-.card-front, .card-back {
-  position: absolute;
-  backface-visibility: hidden;
-  width: 100%;
-}
-.card-back {
-  transform: rotateY(180deg);
-  background-color: #1b263b;
-  color: #fff;
-  padding: 5px;
-  font-size: 0.7rem;
-  border-radius: 8px;
+/* 📱 Mobile Tooltip Text for Late Reason */
+@media (max-width: 768px) {
+  .card-content[title]:after {
+    content: attr(title);
+    display: block;
+    font-size: 0.65rem;
+    color: #ff9999;
+    text-align: center;
+    margin-top: 5px;
+    font-style: italic;
+    white-space: pre-line;
+  }
 }
