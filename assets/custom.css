@@ -23,7 +23,7 @@
   transition: transform 0.6s;
 }
 
-.card-content:hover .card-inner {
+.card-content.flip-active .card-inner {
   transform: rotateY(180deg);
 }
 
