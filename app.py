@@ -91,11 +91,12 @@ def generate_status_block(pool_df):
         late_start_reason = ""
         if pd.notna(row["Start Time"]) and pd.notna(pool_up_time):
             join_delay = (row["Start Time"] - pool_up_time).total_seconds() / 60
-                  if join_delay >= 10:
-                    late_start_pool = True
-                    late_start_minutes = int(join_delay - 10)
-                    late_start_reason = f"Started pool {late_start_minutes} min late (based on Pool Up)"
-                      
+            if join_delay >= 10:
+                late_start_pool = True
+                late_start_minutes = int(join_delay - 10)
+                late_start_reason = f"Started pool {late_start_minutes} min late (based on Pool Up)"
+
+
         # Combine late reasons
         combined_late_reason = "\n".join(filter(None, [late_reason, late_start_reason]))
 
