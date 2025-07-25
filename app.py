@@ -125,13 +125,23 @@ def generate_status_block(pool_df):
 
         visual_rows.append(
             html.Div([
-                html.Div(name, className=name_class),
-                progress_component,
-                html.Div(load_display, className="load-display"),
-                html.Div(duration_str, className="duration-display"),
-                html.Div(combined_late_reason, className="late-reason") if combined_late_reason else None
-            ], className=box_class, title=tooltip_calc if tooltip_calc else None)
+                html.Div([
+                    html.Div([
+                        html.Div(name, className=name_class),
+                        progress_component,
+                        html.Div(load_display, className="load-display"),
+                        html.Div(duration_str, className="duration-display"),
+                        html.Div(combined_late_reason, className="late-reason") if combined_late_reason else None
+                    ], className="card-front"),
+                    html.Div([
+                        html.Div(f"Start: {row['Start Time'].strftime('%H:%M:%S') if pd.notna(row['Start Time']) else '-'}"),
+                        html.Div(f"Load: {int(load)}"),
+                        html.Div(status),
+                    ], className="card-back"),
+                ], className="card-inner"),
+            ], className=box_class)
         )
+
 
     return dbc.Card([
         dbc.CardHeader([
