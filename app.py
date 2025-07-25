@@ -51,7 +51,29 @@ def generate_status_block(pool_df):
     total_load = tl_row["Load"].max() if not tl_row.empty else 0
     manpower = len(active_rows)
     target_load = total_load / manpower if manpower else 1
-    expected_time = pool_up_time + timedelta(hours=1, minutes=5) if pool_up_time else None
+    # Pool ETA Done logic
+    special_suffixes = ["(10-DAY)", "(3-DAY)", "(6PM-NIGHT)", "(10PM-NIGHT)"]
+    is_special_pool = (
+        pool_name.startswith("PoolMaster_2025") and
+        any(suffix in pool_name for suffix in special_suffixes) and
+        tab == "WORKPAGE 1"
+    )
+    
+    expected_time = None
+    if pd.notna(pool_up_time):
+        if is_special_pool:
+            # Special Pool ETA = Pool Up + 70 min
+            expected_time = pool_up_time + timedelta(minutes=70)
+        else:
+            # Regular pool — based on previous ETA
+            all_pools_with_up = pool_df[pool_df["Pool Up"].notna()]
+            sorted_prev = all_pools_with_up[all_pools_with_up["Pool Up"] < pool_up_time]
+            if not sorted_prev.empty:
+                last_pool_up = sorted_prev["Pool Up"].max()
+                expected_time = last_pool_up + timedelta(minutes=70 + 60)  # +60 for 1h work + 10 buffer
+            else:
+                expected_time = pool_up_time + timedelta(minutes=70)
+
 
     visual_rows = []
     for _, row in active_rows.iterrows():
