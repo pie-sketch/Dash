@@ -52,6 +52,24 @@
   border-radius: 8px;
 }
 
+.card-back div {
+  margin-bottom: 4px;
+}
+
+/* ✏️ Label text on back card (like "Late Start") */
+.card-back .label-text {
+  font-weight: bold;
+  color: #f5e663;
+}
+
+/* ✏️ Late reason in italic, slightly dim */
+.card-back .late-reason {
+  color: #ffaaaa;
+  font-style: italic;
+  white-space: pre-line;
+}
+
+
 /* 🧑‍💼 Staff Name */
 .staff-name {
   font-weight: bold;
