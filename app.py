@@ -196,7 +196,7 @@ def generate_status_block(pool_df):
                 html.Div([
                     html.Span(f"Total Count: {total_count}", style={"marginRight": "12px"}),
                     html.Span(f"Manpower: {manpower}", style={"marginRight": "12px"}),
-                    html.Span(f"Expected Completion: {expected_time.strftime('%H:%M:%S') if expected_time else '-'}")
+                    html.Span(f"Pool ETA Done: {expected_time.strftime('%H:%M:%S') if expected_time else '-'}")
                 ], className="pool-info-box")
             ], className="pool-header")
         ]),
