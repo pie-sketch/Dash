@@ -76,7 +76,7 @@ def generate_status_block(pool_df):
         tooltip_calc = None
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]) and load > 0:
             actual_duration = (row["End Time"] - row["Start Time"]).total_seconds() / 60
-            expected_duration = (load / 2.5) + 5  # minutes
+            expected_duration = (load / 2.5) + 10
             if actual_duration > expected_duration:
                 overdue = True
                 late_reason = f"Expected ≤ {int(expected_duration)}min, got {int(actual_duration)}min"
@@ -91,11 +91,11 @@ def generate_status_block(pool_df):
         late_start_reason = ""
         if pd.notna(row["Start Time"]) and pd.notna(pool_up_time):
             join_delay = (row["Start Time"] - pool_up_time).total_seconds() / 60
-            if join_delay >= 5:
-                late_start_pool = True
-                late_start_minutes = int(join_delay - 5)
-                late_start_reason = f"Started pool {late_start_minutes} min late (based on Pool Up)"
-
+                  if join_delay >= 10:
+                    late_start_pool = True
+                    late_start_minutes = int(join_delay - 10)
+                    late_start_reason = f"Started pool {late_start_minutes} min late (based on Pool Up)"
+                      
         # Combine late reasons
         combined_late_reason = "\n".join(filter(None, [late_reason, late_start_reason]))
 
