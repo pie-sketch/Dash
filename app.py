@@ -75,8 +75,8 @@ def generate_status_block(pool_df):
         tooltip_calc = None
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]) and load > 0:
             actual_duration = (row["End Time"] - row["Start Time"]).total_seconds() / 60
-            expected_duration = (load / 2.5) + 10  # ⏱ adaptive based on load
-            if actual_duration > (expected_duration + 1):  # ⏱ add 1-minute grace
+            expected_duration = (load / 2.5) + 10
+            if actual_duration > (expected_duration + 1):
                 overdue = True
                 late_reason = f"Expected ≤ {int(expected_duration)}min, got {int(actual_duration)}min"
                 tooltip_calc = (
@@ -95,10 +95,8 @@ def generate_status_block(pool_df):
                 late_start_minutes = int(join_delay - 10)
                 late_start_reason = f"Started pool {late_start_minutes} min late (based on Pool Up)"
 
-        # Combine both
         combined_late_reason = "\n".join(filter(None, [late_reason, late_start_reason]))
 
-        # Classes
         box_class = "card-content glow-card"
         progress_wrapper_class = ""
         name_class = "staff-name"
@@ -111,7 +109,6 @@ def generate_status_block(pool_df):
         if late_start_pool:
             name_class += " late-start-name glow-name"
 
-        # Card
         progress_component = html.Div(
             dbc.Progress(
                 value=load_percent,
@@ -123,7 +120,7 @@ def generate_status_block(pool_df):
             className=progress_wrapper_class
         )
 
-        visual_rows.append(  # ✅ Correct indentation (align with progress_component)
+        visual_rows.append(
             html.Div([
                 html.Div([
                     html.Div([
@@ -140,8 +137,6 @@ def generate_status_block(pool_df):
                 ], className="card-inner"),
             ], className=box_class)
         )
-
-
 
     return dbc.Card([
         dbc.CardHeader([
@@ -166,6 +161,7 @@ def generate_status_block(pool_df):
             html.Div(visual_rows, className="seat-grid", style={"padding": "10px"})
         )
     ], className="mb-4", style={"backgroundColor": "#0d1b2a", "borderRadius": "15px"})
+
 
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
