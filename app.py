@@ -52,7 +52,6 @@ def generate_status_block(pool_df):
     manpower = len(active_rows)
     target_load = total_load / manpower if manpower else 1
 
-    # ✅ Unified Pool ETA Done logic
     expected_time = pool_up_time + timedelta(minutes=70) if pool_up_time else None
 
     visual_rows = []
@@ -63,20 +62,20 @@ def generate_status_block(pool_df):
         load_percent = min(100, int((load / target_load) * 100)) if target_load else 0
         load_display = f"{int(load)}"
 
-        # Duration display
+        # Duration
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]):
             time_taken = row["End Time"] - row["Start Time"]
             duration_str = str(time_taken).replace("0 days ", "").split(".")[0]
         else:
             duration_str = "-"
 
-        # Late logic (slow finish)
+        # ✅ Late logic (auto-adjust based on load)
         overdue = False
         late_reason = ""
         tooltip_calc = None
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]) and load > 0:
             actual_duration = (row["End Time"] - row["Start Time"]).total_seconds() / 60
-            expected_duration = (load / 2.5) + 10  # ⏱ buffer changed to 10 min
+            expected_duration = (load / 2.5) + 10  # ⏱ adaptive based on load
             if actual_duration > expected_duration:
                 overdue = True
                 late_reason = f"Expected ≤ {int(expected_duration)}min, got {int(actual_duration)}min"
@@ -85,7 +84,7 @@ def generate_status_block(pool_df):
                     f"Got: {int(actual_duration)} min"
                 )
 
-        # Late start logic - always compare to Pool Up
+        # ⏳ Late start logic
         late_start_pool = False
         late_start_minutes = None
         late_start_reason = ""
@@ -96,11 +95,10 @@ def generate_status_block(pool_df):
                 late_start_minutes = int(join_delay - 10)
                 late_start_reason = f"Started pool {late_start_minutes} min late (based on Pool Up)"
 
-
-        # Combine late reasons
+        # Combine both
         combined_late_reason = "\n".join(filter(None, [late_reason, late_start_reason]))
 
-        # Class setup
+        # Classes
         box_class = "card-content glow-card"
         progress_wrapper_class = ""
         name_class = "staff-name"
@@ -113,7 +111,7 @@ def generate_status_block(pool_df):
         if late_start_pool:
             name_class += " late-start-name glow-name"
 
-        # Progress bar
+        # Card
         progress_component = html.Div(
             dbc.Progress(
                 value=load_percent,
@@ -158,7 +156,6 @@ def generate_status_block(pool_df):
             html.Div(visual_rows, className="seat-grid", style={"padding": "10px"})
         )
     ], className="mb-4", style={"backgroundColor": "#0d1b2a", "borderRadius": "15px"})
-
 
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
