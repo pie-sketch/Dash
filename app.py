@@ -7,6 +7,8 @@ import os
 
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1LltJKL6wsXQt_6Qv3rwjfL9StACcMHsNQ2C_wTKw_iw/export?format=csv&gid=0"
 
+previous_eta_done = None  # ⏱ Global tracker for chained ETA logic
+
 def load_data():
     df = pd.read_csv(SHEET_URL)
     df["Start Time"] = pd.to_datetime(df["Start Time"], errors="coerce", dayfirst=True)
@@ -33,6 +35,8 @@ def get_status(row, pool_df):
     return "In Progress", "warning", ""
 
 def generate_status_block(pool_df):
+    global previous_eta_done
+
     tl_row = pool_df[pool_df["Pool Up"].notna()]
     if not tl_row.empty:
         tl = tl_row.iloc[0]
@@ -52,7 +56,19 @@ def generate_status_block(pool_df):
     manpower = len(active_rows)
     target_load = total_load / manpower if manpower else 1
 
-    expected_time = pool_up_time + timedelta(minutes=70) if pool_up_time else None
+    # ⏱ ETA logic
+    pool_label = f"{pool_name} {tab}".upper()
+    is_exception = any(
+        keyword in pool_label
+        for keyword in ["(10-DAY) WORKPAGE 1", "(3-DAY) WORKPAGE 1", "(10PM-NIGHT) WORKPAGE 1"]
+    )
+
+    if is_exception or not previous_eta_done:
+        expected_time = pool_up_time + timedelta(minutes=70) if pool_up_time else None
+    else:
+        expected_time = previous_eta_done + timedelta(minutes=70)
+
+    previous_eta_done = expected_time
 
     visual_rows = []
     for _, row in active_rows.iterrows():
@@ -69,7 +85,7 @@ def generate_status_block(pool_df):
         else:
             duration_str = "-"
 
-        # ✅ Late logic (auto-adjust based on load)
+        # Late logic
         overdue = False
         late_reason = ""
         tooltip_calc = None
@@ -80,11 +96,11 @@ def generate_status_block(pool_df):
                 overdue = True
                 late_reason = f"Expected ≤ {int(expected_duration)}min, got {int(actual_duration)}min"
                 tooltip_calc = (
-                    f"Expected = {int(load)} ÷ 2.5 (load/min) + 10 min (buffer) → {int(expected_duration)} min\n"
+                    f"Expected = {int(load)} ÷ 2.5 + 10 → {int(expected_duration)} min\n"
                     f"Got: {int(actual_duration)} min"
                 )
 
-        # ⏳ Late start logic
+        # Late Start
         late_start_pool = False
         late_start_minutes = None
         late_start_reason = ""
@@ -93,7 +109,7 @@ def generate_status_block(pool_df):
             if join_delay >= 10:
                 late_start_pool = True
                 late_start_minutes = int(join_delay - 10)
-                late_start_reason = f"Started pool {late_start_minutes} min late (based on Pool Up)"
+                late_start_reason = f"Started pool {late_start_minutes} min late"
 
         combined_late_reason = "\n".join(filter(None, [late_reason, late_start_reason]))
 
@@ -162,8 +178,6 @@ def generate_status_block(pool_df):
         )
     ], className="mb-4", style={"backgroundColor": "#0d1b2a", "borderRadius": "15px"})
 
-
-
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
 app.title = "Live Pool Dashboard"
 
@@ -189,17 +203,21 @@ last_updated_timestamp = datetime.now()
     Input("auto-refresh", "n_intervals")
 )
 def update_dashboard(n):
-    global last_updated_timestamp
+    global last_updated_timestamp, previous_eta_done
     last_updated_timestamp = datetime.now()
-    df = load_data()
+    previous_eta_done = None  # ⏱ Reset at start of each refresh
 
+    df = load_data()
     pool_groups = df[df["Pool Up"].notna()].groupby("Pool ID")["Pool Up"].max().reset_index()
     pool_groups = pool_groups.sort_values("Pool Up", ascending=False).head(9)
     pool_ids = pool_groups["Pool ID"].tolist()
 
-    pool_blocks = [generate_status_block(df[df["Pool ID"] == pid]) for pid in pool_ids]
-    updated_time = last_updated_timestamp.strftime("Last updated: %d/%m/%Y %H:%M:%S")
+    pool_blocks = []
+    for pid in reversed(pool_ids):  # Oldest to newest (to chain ETA)
+        block = generate_status_block(df[df["Pool ID"] == pid])
+        pool_blocks.insert(0, block)
 
+    updated_time = last_updated_timestamp.strftime("Last updated: %d/%m/%Y %H:%M:%S")
     if not pool_blocks:
         return html.Div("No pool data."), [], updated_time
 
@@ -212,7 +230,7 @@ def update_dashboard(n):
 def update_countdown(n):
     global last_updated_timestamp
     elapsed = (datetime.now() - last_updated_timestamp).seconds
-    remaining = max(0, 30 - elapsed)  # ⏱ 30-second countdown
+    remaining = max(0, 30 - elapsed)
     return f"\u23F3 Refreshing in: {remaining:02d}s"
 
 @app.callback(
