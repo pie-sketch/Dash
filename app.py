@@ -100,16 +100,31 @@ def generate_status_block(pool_df):
                     f"Got: {int(actual_duration)} min"
                 )
 
-        # Late Start
+        # Late Start — uses Pool Up for specific first WORKPAGE pools, otherwise uses ETA
         late_start_pool = False
         late_start_minutes = None
         late_start_reason = ""
-        if pd.notna(row["Start Time"]) and pd.notna(pool_up_time):
-            join_delay = (row["Start Time"] - pool_up_time).total_seconds() / 60
-            if join_delay >= 10:
-                late_start_pool = True
-                late_start_minutes = int(join_delay - 10)
-                late_start_reason = f"Started pool {late_start_minutes} min late"
+        
+        if pd.notna(row["Start Time"]):
+            pool_label = f"{pool_name} {tab}".upper()
+            late_start_exempt = any(
+                keyword in pool_label
+                for keyword in [
+                    "(10-DAY) WORKPAGE 1",
+                    "(3-DAY) WORKPAGE 1",
+                    "(6PM-NIGHT) WORKPAGE 1",
+                    "(10PM-NIGHT) WORKPAGE 1"
+                ]
+            )
+            reference_time = pool_up_time if late_start_exempt else expected_time
+        
+            if pd.notna(reference_time):
+                join_delay = (row["Start Time"] - reference_time).total_seconds() / 60
+                if join_delay >= 10:
+                    late_start_pool = True
+                    late_start_minutes = int(join_delay - 10)
+                    late_start_reason = f"Started pool {late_start_minutes} min late"
+
 
         combined_late_reason = "\n".join(filter(None, [late_reason, late_start_reason]))
 
