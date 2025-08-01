@@ -215,10 +215,16 @@ body, html {
   50% { text-shadow: 0 0 12px red; transform: scale(1.08); }
 }
 
+@keyframes redGlow {
+  0%   { box-shadow: 0 0 4px red; }
+  50%  { box-shadow: 0 0 12px red; }
+  100% { box-shadow: 0 0 4px red; }
+}
+
 .overdue-box {
   border: 2px solid red;
   box-shadow: 0 0 10px red;
-  background-color: transparent !important;
+  animation: redGlow 1.5s infinite;
   transition: box-shadow 0.3s ease-in-out;
 }
 
@@ -237,12 +243,6 @@ body, html {
   0% { text-shadow: 0 0 2px #fff000; }
   50% { text-shadow: 0 0 8px #ffe600; }
   100% { text-shadow: 0 0 2px #fff000; }
-}
-
-@keyframes redGlow {
-  0%   { box-shadow: 0 0 4px red; }
-  50%  { box-shadow: 0 0 12px red; }
-  100% { box-shadow: 0 0 4px red; }
 }
 
 
