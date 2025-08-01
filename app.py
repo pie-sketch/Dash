@@ -124,7 +124,7 @@ def generate_status_block(pool_df):
                 if join_delay >= 10:
                     late_start_pool = True
                     late_start_minutes = int(join_delay - 10)
-                    late_start_reason = f"Started pool {late_start_minutes} min late"
+                    late_start_reason = f"Started pool {late_start_minutes}min late"
 
 
         combined_late_reason = "\n".join(filter(None, [late_reason, late_start_reason]))
