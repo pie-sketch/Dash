@@ -163,7 +163,6 @@ def generate_status_block(pool_df):
                     ], className="card-front"),
                     html.Div([
                         html.Div(f"Start: {row['Start Time'].strftime('%H:%M:%S') if pd.notna(row['Start Time']) else '-'}"),
-                        html.Div("⚠️ Late Start", className="label-text") if late_start_pool else None,
                         html.Div(combined_late_reason, className="late-reason") if combined_late_reason else None,
                     ], className="card-back"),
                 ], className="card-inner"),
