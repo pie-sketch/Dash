@@ -215,11 +215,13 @@ body, html {
   50% { text-shadow: 0 0 12px red; transform: scale(1.08); }
 }
 
-/* 🟥 Overdue Card */
 .overdue-box {
-  background-color: #3b0d0d !important;
-  border: 1px solid red;
+  border: 2px solid red;
+  box-shadow: 0 0 10px red;
+  background-color: transparent !important;
+  transition: box-shadow 0.3s ease-in-out;
 }
+
 
 /* 🌟 Name Glow for Late Start */
 .late-start-name {
@@ -236,6 +238,13 @@ body, html {
   50% { text-shadow: 0 0 8px #ffe600; }
   100% { text-shadow: 0 0 2px #fff000; }
 }
+
+@keyframes redGlow {
+  0%   { box-shadow: 0 0 4px red; }
+  50%  { box-shadow: 0 0 12px red; }
+  100% { box-shadow: 0 0 4px red; }
+}
+
 
 /* 📱 Mobile Tooltip Text for Late Reason */
 @media (max-width: 768px) {
