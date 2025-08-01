@@ -89,17 +89,17 @@ def generate_status_block(pool_df):
         overdue = False
         late_reason = ""
         tooltip_calc = None
+        
         if pd.notna(row["Start Time"]) and pd.notna(row["End Time"]) and load > 0:
             actual_duration = (row["End Time"] - row["Start Time"]).total_seconds() / 60
             expected_duration = (load / 2.5)
             if actual_duration > (expected_duration + 1):
                 overdue = True
                 late_reason = f"Expected ≤ {int(expected_duration)}min, got {int(actual_duration)}min"
-                 tooltip_calc = (
+                tooltip_calc = (
                     f"Expected = {int(load)} ÷ 2.5 → {int(expected_duration)} min\n"
                     f"Got: {int(actual_duration)} min"
                 )
-
 
         # Late Start — uses Pool Up for specific first WORKPAGE pools, otherwise uses ETA
         late_start_pool = False
