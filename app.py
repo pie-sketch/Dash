@@ -95,10 +95,11 @@ def generate_status_block(pool_df):
             if actual_duration > (expected_duration + 1):
                 overdue = True
                 late_reason = f"Expected ≤ {int(expected_duration)}min, got {int(actual_duration)}min"
-                tooltip_calc = (
-                    f"Expected = {int(load)} ÷ 2.5 + 10 → {int(expected_duration)} min\n"
+                 tooltip_calc = (
+                    f"Expected = {int(load)} ÷ 2.5 → {int(expected_duration)} min\n"
                     f"Got: {int(actual_duration)} min"
                 )
+
 
         # Late Start — uses Pool Up for specific first WORKPAGE pools, otherwise uses ETA
         late_start_pool = False
